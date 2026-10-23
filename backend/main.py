@@ -176,6 +176,17 @@ if _FRONTEND_DIR.exists():
     except Exception as _mount_err:
         logger.warning("Could not mount frontend static files: %s", _mount_err)
 
+_JS_DIR = _FRONTEND_DIR / "js"
+if _JS_DIR.exists():
+    try:
+        app.mount(
+            "/js",
+            StaticFiles(directory=str(_JS_DIR)),
+            name="js",
+        )
+    except Exception as _mount_err:
+        logger.warning("Could not mount /js directory: %s", _mount_err)
+
 # ---------------------------------------------------------------------------
 # Pydantic request models
 # ---------------------------------------------------------------------------

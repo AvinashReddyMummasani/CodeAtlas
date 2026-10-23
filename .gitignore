@@ -1,0 +1,30 @@
+# Environment & Secrets (NEVER COMMIT SENSITIVE API KEYS)
+.env
+.env*.local
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Session & Runtime Storage
+backend/sessions/
+sessions/
+backend/chroma_store/
+chroma_store/
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

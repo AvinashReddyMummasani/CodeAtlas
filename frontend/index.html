@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CodeAtlas — AI Code Intelligence</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>tailwind.config={theme:{extend:{colors:{s:{900:'#0d1117',800:'#161b22',700:'#21262d',600:'#30363d',500:'#484f58',400:'#8b949e',300:'#b1bac4',200:'#c9d1d9',100:'#e6edf3'},a:'#58a6ff',g:'#3fb950',y:'#d29922',r:'#f85149',p:'#bc8cff',o:'#f0883e'}}}}</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:#161b22}::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+
+/* Prism */
+pre[class*=language-]{margin:0;font-size:12.5px;background:transparent!important;padding:0}
+code[class*=language-]{font-family:'Fira Code','JetBrains Mono',monospace!important;font-size:12.5px}
+
+/* Animations */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 #58a6ff33}50%{box-shadow:0 0 0 6px #58a6ff11}}
+
+.anim-pulse{animation:pulse 1.5s ease-in-out infinite}
+.anim-spin{animation:spin 0.9s linear infinite}
+.anim-fade{animation:fadeIn .25s ease both}
+.anim-slide{animation:slideIn .2s ease both}
+.anim-glow{animation:glow 2s ease-in-out infinite}
+
+/* Skeleton loader */
+.skeleton{background:linear-gradient(90deg,#21262d 25%,#30363d 50%,#21262d 75%);background-size:400px 100%;animation:shimmer 1.4s ease-in-out infinite;border-radius:4px}
+
+/* Active line highlight */
+.hi-line{background:#58a6ff18;border-left:2.5px solid #58a6ff;padding-left:6px!important}
+
+/* Tree items */
+.tree-item{transition:background .1s,color .1s;border-radius:5px;cursor:pointer}
+.tree-item:hover{background:#1f2937}
+.tree-item.selected{background:#1d3557;color:#58a6ff}
+
+/* Tabs */
+.tab{padding:8px 14px;font-size:12px;font-weight:500;color:#8b949e;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap}
+.tab:hover{color:#c9d1d9}
+.tab.active{color:#58a6ff;border-bottom-color:#58a6ff}
+
+/* Badge */
+.ai-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:#f0883e;background:#f0883e15;border:1px solid #f0883e33;border-radius:4px;padding:2px 7px;letter-spacing:.03em}
+.no-web{font-size:10px;color:#d29922;background:#d2992215;border:1px solid #d2992233;border-radius:4px;padding:2px 7px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .15s}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-blue{background:#58a6ff22;color:#58a6ff}.btn-blue:hover:not(:disabled){background:#58a6ff33}
+.btn-green{background:#3fb95022;color:#3fb950}.btn-green:hover:not(:disabled){background:#3fb95033}
+.btn-red{background:#f8514922;color:#f85149}.btn-red:hover:not(:disabled){background:#f8514933}
+.btn-purple{background:#bc8cff22;color:#bc8cff}.btn-purple:hover:not(:disabled){background:#bc8cff33}
+.btn-yellow{background:#d2992222;color:#d29922}.btn-yellow:hover:not(:disabled){background:#d2992233}
+.btn-solid-blue{background:#238636;color:#fff;background:#1f6feb}.btn-solid-blue:hover:not(:disabled){background:#388bfd}
+
+/* Cards */
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px}
+
+/* Drop zone */
+.dropzone{border:2px dashed #30363d;border-radius:10px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .2s}
+.dropzone:hover,.dropzone.drag{border-color:#58a6ff;background:#58a6ff08}
+
+/* Chat bubbles */
+.bubble-user{background:linear-gradient(135deg,#1f6feb,#1a5cb8);border-radius:14px 14px 3px 14px}
+.bubble-ai{background:#1f2937;border:1px solid #30363d;border-radius:14px 14px 14px 3px}
+
+/* Progress bar */
+.prog-bar{height:4px;background:#21262d;border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#1f6feb,#58a6ff);border-radius:99px;transition:width .4s ease}
+
+/* Risk gauge */
+.gauge-fill{height:100%;border-radius:99px;transition:width .5s ease}
+
+/* Severity */
+.sev-H{background:#f8514922;color:#f85149;border:1px solid #f8514944}
+.sev-M{background:#d2992222;color:#d29922;border:1px solid #d2992244}
+.sev-L{background:#3fb95022;color:#3fb950;border:1px solid #3fb95044}
+.sev{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px}
+
+/* Stars */
+.star-on{color:#f0883e}.star-off{color:#30363d}
+
+/* Flow step */
+.flow-step{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px 14px;min-width:120px;max-width:160px;flex-shrink:0}
+.flow-step.entry{border-color:#3fb95066;background:#3fb95009}
+.flow-step.target{border-color:#58a6ff66;background:#58a6ff09}
+.flow-arrow{font-size:18px;color:#58a6ff;flex-shrink:0;font-weight:700;align-self:center}
+
+/* Input */
+.inp{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:8px 12px;font-size:13px;color:#e6edf3;outline:none;transition:border .15s;width:100%}
+.inp:focus{border-color:#58a6ff66}
+
+/* Section header */
+.sec-hdr{font-size:11px;font-weight:700;color:#8b949e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback,useMemo}=React;
+const API='http://localhost:8000/api';
+const cls=(...a)=>a.filter(Boolean).join(' ');
+const bn=p=>p?p.replace(/\\/g,'/').split('/').pop():'';
+const short=(s,n=110)=>s?(s.length>n?s.slice(0,n)+'…':s):'';
+
+// ── Toast ─────────────────────────────────────────────────────────
+function useToast(){
+  const [T,setT]=useState([]);
+  const add=useCallback((msg,type='info')=>{
+    const id=Date.now()+Math.random();
+    setT(p=>[...p,{id,msg,type}]);
+    setTimeout(()=>setT(p=>p.filter(t=>t.id!==id)),5000);
+  },[]);
+  const rm=useCallback(id=>setT(p=>p.filter(t=>t.id!==id)),[]);
+  return{toasts:T,toast:add,rmToast:rm};
+}
+const Toasts=({T,rm})=>(
+  <div style={{position:'fixed',bottom:20,right:20,zIndex:9999,display:'flex',flexDirection:'column',gap:8,pointerEvents:'none'}}>
+    {T.map(t=>(
+      <div key={t.id} onClick={()=>rm(t.id)}
+        style={{pointerEvents:'auto',padding:'10px 16px',borderRadius:10,fontSize:13,fontWeight:500,cursor:'pointer',
+          boxShadow:'0 4px 24px #0009',
+          background:t.type==='error'?'#2d1515':t.type==='success'?'#0d2117':'#0d1a2d',
+          border:`1px solid ${t.type==='error'?'#f8514955':t.type==='success'?'#3fb95055':'#58a6ff55'}`,
+          color:t.type==='error'?'#f85149':t.type==='success'?'#3fb950':'#58a6ff'}}>
+        {t.msg}
+      </div>
+    ))}
+  </div>
+);
+
+// ── Spinner ───────────────────────────────────────────────────────
+const Spin=({sz=14,color='#58a6ff'})=>(
+  <svg className="anim-spin" width={sz} height={sz} viewBox="0 0 24 24" fill="none" strokeWidth="2.5">
+    <circle cx="12" cy="12" r="10" stroke={color} strokeOpacity=".15"/>
+    <path d="M12 2a10 10 0 0 1 10 10" stroke={color}/>
+  </svg>
+);
+
+// ── AI Badge ──────────────────────────────────────────────────────
+const AIBadge=()=><span className="ai-badge">⚠ AI Advisory</span>;
+
+// ── Stars ─────────────────────────────────────────────────────────
+const Stars=({n=0,max=5})=>(
+  <span style={{display:'inline-flex',gap:2}}>
+    {Array.from({length:max},(_,i)=>(
+      <svg key={i} width="13" height="13" viewBox="0 0 24 24"
+        fill={i<n?'#f0883e':'#30363d'}>
+        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+      </svg>
+    ))}
+  </span>
+);
+
+// ── Code viewer ───────────────────────────────────────────────────
+const CodeViewer=({source='',lineno,endLineno,maxH='100%'})=>{
+  const ref=useRef();
+  useEffect(()=>{
+    if(ref.current&&window.Prism)
+      ref.current.querySelectorAll('code.language-python').forEach(e=>Prism.highlightElement(e));
+  },[source]);
+  const lines=useMemo(()=>source.split('\n'),[source]);
+  if(!source)return(
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'#484f58',fontSize:13}}>
+      No source available
+    </div>
+  );
+  return(
+    <div ref={ref} style={{overflowY:'auto',maxHeight:maxH,background:'#0d1117',borderRadius:8,fontFamily:'monospace'}}>
+      <table style={{borderCollapse:'collapse',width:'100%',fontSize:12.5}}>
+        <tbody>
+          {lines.map((line,i)=>{
+            const ln=i+1,hi=lineno&&ln>=lineno&&ln<=(endLineno||lineno);
+            return(
+              <tr key={i} className={hi?'hi-line':''}>
+                <td style={{paddingLeft:12,paddingRight:10,textAlign:'right',color:'#484f58',minWidth:42,verticalAlign:'top',userSelect:'none',fontSize:11,paddingTop:1,paddingBottom:1}}>{ln}</td>
+                <td style={{paddingRight:16,verticalAlign:'top',whiteSpace:'pre-wrap',wordBreak:'break-all',paddingTop:1,paddingBottom:1}}>
+                  <code className="language-python">{line}</code>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// ── Level config ──────────────────────────────────────────────────
+const LEVELS={
+  FILE:{icon:'📄',color:'#58a6ff',label:'File'},
+  BLOCK:{icon:'🔷',color:'#bc8cff',label:'Block'},
+  LOGICAL_BLOCK:{icon:'🔶',color:'#d29922',label:'Logic'},
+  FUNCTION:{icon:'🔹',color:'#3fb950',label:'Function'},
+};
+
+// ── Build tree ────────────────────────────────────────────────────
+function buildTree(ft){
+  if(!ft?.files)return[];
+  return Object.entries(ft.files).map(([fp,fn])=>({
+    id:fp,name:bn(fp),level:'FILE',source:fn.source,summary:fn.summary,file:fp,
+    entry_point:fn.entry_point,
+    children:[
+      ...Object.entries(fn.blocks||{}).map(([id,b])=>({id,name:b.name||id,level:'BLOCK',lineno:b.lineno,endLineno:b.end_lineno,source:b.source_snippet,summary:b.summary,file:fp,children:[]})),
+      ...Object.entries(fn.logical_blocks||{}).map(([id,l])=>({id,name:`${l.type||'block'} @ L${l.lineno}`,level:'LOGICAL_BLOCK',lineno:l.lineno,endLineno:l.end_lineno,source:l.source_snippet,summary:l.summary,file:fp,children:[]})),
+      ...Object.entries(fn.functions||{}).map(([id,f])=>({id,name:f.name||id,level:'FUNCTION',lineno:f.lineno,endLineno:f.end_lineno,source:f.source_snippet,summary:f.summary,file:fp,callers:f.callers||[],callees:f.callees||[],children:[]})),
+    ]
+  }));
+}
+
+// ── Tree node ─────────────────────────────────────────────────────
+const TreeNode=({node,depth=0,onSel,selId,defaultOpen=false})=>{
+  const [open,setOpen]=useState(defaultOpen||depth===0);
+  const has=node.children?.length>0;
+  const sel=selId===node.id;
+  const cfg=LEVELS[node.level]||LEVELS.FUNCTION;
+  return(
+    <div>
+      <div className={cls('tree-item',sel&&'selected')}
+        style={{display:'flex',alignItems:'center',gap:6,padding:`4px ${8+depth*12}px 4px ${8+depth*12}px`,paddingLeft:8+depth*12}}
+        onClick={()=>{has&&setOpen(o=>!o);onSel(node);}}>
+        <span style={{width:12,textAlign:'center',color:'#484f58',fontSize:10,flexShrink:0}}>
+          {has?(open?'▾':'▸'):null}
+        </span>
+        <span style={{flexShrink:0,fontSize:13}}>{cfg.icon}</span>
+        <span style={{flex:1,fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:sel?'#58a6ff':cfg.color}}>
+          {node.name}
+        </span>
+        {node.entry_point&&<span title="Entry point" style={{fontSize:9,background:'#3fb95022',color:'#3fb950',border:'1px solid #3fb95044',borderRadius:3,padding:'0 4px'}}>ENTRY</span>}
+        {node.lineno&&<span style={{fontSize:10,color:'#484f58',flexShrink:0}}>:{node.lineno}</span>}
+      </div>
+      {open&&has&&(
+        <div>{node.children.map(c=><TreeNode key={c.id} node={c} depth={depth+1} onSel={onSel} selId={selId}/>)}</div>
+      )}
+    </div>
+  );
+};
+
+// ── Sidebar ───────────────────────────────────────────────────────
+const Sidebar=({sid,tree,sel,onSel,onUpload,uploading,progress})=>{
+  const [q,setQ]=useState('');
+  const [res,setRes]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const timer=useRef();
+  const tdata=useMemo(()=>tree?buildTree(tree):[],(tree));
+
+  useEffect(()=>{
+    clearTimeout(timer.current);
+    if(!q||!sid){setRes([]);return;}
+    timer.current=setTimeout(async()=>{
+      setLoading(true);
+      try{const r=await fetch(`${API}/session/${sid}/search?q=${encodeURIComponent(q)}`);setRes(await r.json());}
+      catch{}finally{setLoading(false);}
+    },320);
+  },[q,sid]);
+
+  const pick=r=>{
+    const fn=tree?.all_functions?.[r.func_id];
+    if(fn)onSel({id:r.func_id,name:r.name,level:'FUNCTION',lineno:fn.lineno,endLineno:fn.end_lineno,source:fn.source_snippet,summary:fn.summary,file:fn.file||fn.filepath,callers:fn.callers||[],callees:fn.callees||[]});
+    setQ('');setRes([]);
+  };
+
+  return(
+    <div style={{width:268,minWidth:268,display:'flex',flexDirection:'column',height:'100%',background:'#161b22',borderRight:'1px solid #30363d'}}>
+      {/* Logo */}
+      <div style={{padding:'14px 14px 10px',borderBottom:'1px solid #30363d',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6}}>
+          <div style={{width:32,height:32,borderRadius:8,background:'linear-gradient(135deg,#1f6feb,#388bfd)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:17}}>🗺️</div>
+          <div>
+            <div style={{fontWeight:700,fontSize:15,color:'#e6edf3',lineHeight:1.2}}>CodeAtlas</div>
+            <div style={{fontSize:10,color:'#8b949e'}}>AI Code Intelligence</div>
+          </div>
+        </div>
+        <AIBadge/>
+      </div>
+
+      {/* Upload */}
+      <div style={{padding:10,borderBottom:'1px solid #30363d',flexShrink:0}}>
+        <DropZone onFile={onUpload} uploading={uploading} progress={progress}/>
+        {sid&&(
+          <div style={{marginTop:8,display:'flex',flexDirection:'column',gap:3}}>
+            <div style={{fontSize:11,color:'#8b949e'}}>
+              <span style={{color:'#484f58'}}>Session </span>
+              <span style={{fontFamily:'monospace',color:'#58a6ff'}}>{sid.slice(0,10)}…</span>
+            </div>
+            {tree&&(
+              <div style={{fontSize:11,color:'#8b949e',display:'flex',gap:10}}>
+                <span>📄 {Object.keys(tree.files||{}).length} files</span>
+                <span>🔹 {Object.keys(tree.all_functions||{}).length} fns</span>
+                {Object.keys(tree.syntax_errors||{}).length>0&&<span style={{color:'#f85149'}}>⚠ {Object.keys(tree.syntax_errors).length} errors</span>}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Search */}
+      {tree&&(
+        <div style={{padding:'8px 10px',borderBottom:'1px solid #30363d',flexShrink:0,position:'relative'}}>
+          <div style={{position:'relative'}}>
+            <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'#484f58'}}>🔍</span>
+            <input className="inp" style={{paddingLeft:30,fontSize:12}} placeholder="Search functions…"
+              value={q} onChange={e=>setQ(e.target.value)}/>
+            {loading&&<span style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)'}}><Spin sz={11}/></span>}
+          </div>
+          {res.length>0&&(
+            <div style={{position:'absolute',left:10,right:10,top:'100%',marginTop:4,background:'#21262d',border:'1px solid #30363d',borderRadius:8,zIndex:100,maxHeight:220,overflowY:'auto',boxShadow:'0 8px 32px #000a'}}>
+              {res.map(r=>(
+                <div key={r.func_id} onClick={()=>pick(r)}
+                  style={{padding:'8px 12px',cursor:'pointer',borderBottom:'1px solid #30363d44',fontSize:12}}
+                  className="tree-item">
+                  <div style={{color:'#3fb950',fontFamily:'monospace',fontWeight:600}}>{r.name}</div>
+                  <div style={{color:'#8b949e',fontSize:11}}>{bn(r.file)} :{r.lineno}</div>
+                  {r.summary_short&&<div style={{color:'#484f58',fontSize:11,marginTop:2}}>{r.summary_short}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tree */}
+      <div style={{flex:1,overflowY:'auto',padding:'4px 4px 8px'}}>
+        {!tree?(
+          <div style={{padding:20,textAlign:'center',color:'#484f58',fontSize:12}}>
+            <div style={{fontSize:32,marginBottom:8}}>🌲</div>
+            Upload a .zip to explore your codebase
+          </div>
+        ):tdata.map(n=><TreeNode key={n.id} node={n} depth={0} onSel={onSel} selId={sel?.id}/>)}
+        {tree?.syntax_errors&&Object.keys(tree.syntax_errors).length>0&&(
+          <div style={{margin:'8px 4px',padding:10,background:'#f8514910',border:'1px solid #f8514933',borderRadius:8,fontSize:11}}>
+            <div style={{color:'#f85149',fontWeight:600,marginBottom:4}}>⚠ Syntax Errors</div>
+            {Object.keys(tree.syntax_errors).map(f=>(
+              <div key={f} style={{color:'#8b949e',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{bn(f)}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Drop zone ─────────────────────────────────────────────────────
+const DropZone=({onFile,uploading,progress})=>{
+  const [drag,setDrag]=useState(false);
+  const inp=useRef();
+  return(
+    <div className={cls('dropzone',drag&&'drag')}
+      onDragOver={e=>{e.preventDefault();setDrag(true)}}
+      onDragLeave={()=>setDrag(false)}
+      onDrop={e=>{e.preventDefault();setDrag(false);const f=e.dataTransfer.files[0];if(f)onFile(f);}}
+      onClick={()=>!uploading&&inp.current?.click()}>
+      <input ref={inp} type="file" accept=".zip" style={{display:'none'}} onChange={e=>e.target.files[0]&&onFile(e.target.files[0])}/>
+      {uploading?(
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
+          <Spin sz={28}/>
+          <div style={{fontSize:12,color:'#8b949e',fontWeight:500}}>{progress?.stage||'Processing…'}</div>
+          <div className="prog-bar" style={{width:'100%'}}>
+            <div className="prog-fill" style={{width:`${progress?.pct||15}%`}}/>
+          </div>
+        </div>
+      ):(
+        <>
+          <div style={{fontSize:26,marginBottom:6}}>📦</div>
+          <div style={{fontSize:12,fontWeight:600,color:'#c9d1d9'}}>Drop .zip here</div>
+          <div style={{fontSize:11,color:'#8b949e',marginTop:2}}>or click to browse</div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// ── Skeleton card ─────────────────────────────────────────────────
+const SkeletonCard=()=>(
+  <div className="card" style={{display:'flex',flexDirection:'column',gap:10}}>
+    <div className="skeleton" style={{height:14,width:'60%'}}/>
+    <div className="skeleton" style={{height:11,width:'90%'}}/>
+    <div className="skeleton" style={{height:11,width:'75%'}}/>
+    <div className="skeleton" style={{height:11,width:'50%'}}/>
+  </div>
+);
+
+// ── Summarization progress overlay ────────────────────────────────
+const SumProgress=({status,onDismiss})=>{
+  if(!status||status.finished)return null;
+  return(
+    <div style={{position:'absolute',inset:0,background:'#0d111788',backdropFilter:'blur(4px)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,zIndex:50}}>
+      <div className="card anim-glow" style={{maxWidth:360,width:'90%',textAlign:'center',padding:28}}>
+        <div style={{fontSize:36,marginBottom:12}}>🤖</div>
+        <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>AI Summarizing Your Code</div>
+        <div style={{fontSize:12,color:'#8b949e',marginBottom:16}}>{status.stage||'Working…'}</div>
+        <div className="prog-bar" style={{marginBottom:8}}>
+          <div className="prog-fill anim-pulse" style={{width:'60%'}}/>
+        </div>
+        <div style={{fontSize:11,color:'#484f58'}}>Using gemini-2.0-flash-lite — you can browse the tree while this runs</div>
+      </div>
+    </div>
+  );
+};
+
+// ── Overview tab ──────────────────────────────────────────────────
+const OverviewTab=({tree,node})=>{
+  if(!tree)return<WelcomeHint/>;
+  if(!node)return(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',gap:12,color:'#484f58'}}>
+      <span style={{fontSize:48}}>🌳</span>
+      <div style={{fontSize:14,color:'#8b949e'}}>Click any node in the left tree to explore it</div>
+    </div>
+  );
+
+  const cfg=LEVELS[node.level]||LEVELS.FUNCTION;
+  const LEVEL_ORDER=['FILE','BLOCK','LOGICAL_BLOCK','FUNCTION'];
+  const breadcrumb=LEVEL_ORDER.slice(0,LEVEL_ORDER.indexOf(node.level)+1)
+    .map(l=>LEVELS[l].label).join(' › ');
+
+  return(
+    <div className="anim-fade" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
+      {/* Header */}
+      <div style={{padding:'12px 20px',borderBottom:'1px solid #30363d',flexShrink:0,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+        <span style={{fontSize:18}}>{cfg.icon}</span>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontFamily:'monospace',fontWeight:700,fontSize:14,color:'#e6edf3',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{node.name}</div>
+          <div style={{fontSize:11,color:'#8b949e',marginTop:1}}>{breadcrumb} · {bn(node.file)}{node.lineno?` :${node.lineno}`:''}</div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+          {node.entry_point&&<span style={{fontSize:10,background:'#3fb95022',color:'#3fb950',border:'1px solid #3fb95044',borderRadius:4,padding:'2px 8px',fontWeight:600}}>ENTRY POINT</span>}
+          <AIBadge/>
+        </div>
+      </div>
+
+      <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column',gap:0}}>
+        {/* Summary */}
+        <div style={{padding:'14px 20px',borderBottom:'1px solid #21262d',flexShrink:0}}>
+          <div className="sec-hdr">AI Summary</div>
+          <div style={{background:'#0d1117',borderRadius:8,padding:14,border:'1px solid #21262d'}}>
+            {node.summary
+              ?<p style={{fontSize:13.5,color:'#c9d1d9',lineHeight:1.75}}>{node.summary}</p>
+              :<p style={{fontSize:13,color:'#484f58',fontStyle:'italic'}}>Summary not yet available — AI is still processing, or click "Retry AI" in the top bar.</p>
+            }
+          </div>
+          {/* Call relations for functions */}
+          {node.level==='FUNCTION'&&(node.callers?.length>0||node.callees?.length>0)&&(
+            <div style={{marginTop:10,display:'flex',gap:16,flexWrap:'wrap'}}>
+              {node.callers?.length>0&&(
+                <div style={{fontSize:11}}>
+                  <span style={{color:'#8b949e'}}>Called by: </span>
+                  {node.callers.slice(0,5).map((c,i)=>(
+                    <span key={i} style={{fontFamily:'monospace',color:'#bc8cff',marginRight:4}}>{c.split('::').pop()}</span>
+                  ))}
+                  {node.callers.length>5&&<span style={{color:'#484f58'}}>+{node.callers.length-5}</span>}
+                </div>
+              )}
+              {node.callees?.length>0&&(
+                <div style={{fontSize:11}}>
+                  <span style={{color:'#8b949e'}}>Calls: </span>
+                  {node.callees.slice(0,5).map((c,i)=>(
+                    <span key={i} style={{fontFamily:'monospace',color:'#3fb950',marginRight:4}}>{c.split('::').pop()}</span>
+                  ))}
+                  {node.callees.length>5&&<span style={{color:'#484f58'}}>+{node.callees.length-5}</span>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Code */}
+        <div style={{flex:1,overflow:'hidden',padding:'12px 20px',display:'flex',flexDirection:'column',gap:8}}>
+          <div className="sec-hdr">Source Code
+            {node.lineno&&<span style={{fontWeight:400,color:'#484f58',marginLeft:8}}>Lines {node.lineno}–{node.endLineno||node.lineno}</span>}
+          </div>
+          <div style={{flex:1,overflow:'hidden',border:'1px solid #21262d',borderRadius:8}}>
+            <CodeViewer source={node.source||node.source_snippet} lineno={node.lineno} endLineno={node.endLineno} maxH="100%"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Welcome hint ──────────────────────────────────────────────────
+const WelcomeHint=()=>(
+  <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',gap:20,padding:32,textAlign:'center'}}>
+    <div style={{fontSize:56}}>🗺️</div>
+    <div>
+      <div style={{fontWeight:700,fontSize:22,color:'#e6edf3',marginBottom:6}}>Welcome to CodeAtlas</div>
+      <div style={{fontSize:13,color:'#8b949e',lineHeight:1.7}}>Upload a Python .zip project using the sidebar.<br/>CodeAtlas will parse, analyze, and summarize your entire codebase.</div>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10,maxWidth:480,width:'100%'}}>
+      {[['🔍 Layered Overview','File → Block → Function drill-down','#58a6ff'],
+        ['📊 Project Report','CVE scan + severity-graded findings','#f0883e'],
+        ['⚡ Optimality Check','Complexity & refactoring suggestions','#d29922'],
+        ['💥 Blast Radius','Call-graph impact score 0–10','#f85149'],
+        ['🌊 Execution Flow','Trace entry-point → target path','#bc8cff'],
+        ['💬 RAG Chat','Natural-language Q&A over your code','#3fb950'],
+      ].map(([t,d,c])=>(
+        <div key={t} style={{background:'#161b22',border:'1px solid #30363d',borderRadius:10,padding:'12px 14px',textAlign:'left'}}>
+          <div style={{fontSize:12,fontWeight:600,color:c,marginBottom:3}}>{t}</div>
+          <div style={{fontSize:11,color:'#8b949e'}}>{d}</div>
+        </div>
+      ))}
+    </div>
+    <div style={{fontSize:11,color:'#484f58'}}>Strictly static analysis — your code is never executed.</div>
+  </div>
+);
+
+// ── Detail tab ────────────────────────────────────────────────────
+const DetailTab=({sid,node,toast})=>{
+  const [opt,setOpt]=useState(null);
+  const [risk,setRisk]=useState(null);
+  const [lOpt,setLOpt]=useState(false);
+  const [lRisk,setLRisk]=useState(false);
+
+  const doOpt=async()=>{
+    if(!node?.id)return;setLOpt(true);setOpt(null);
+    try{
+      const r=await fetch(`${API}/session/${sid}/optimize`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({func_id:node.id})});
+      const d=await r.json();if(d.error)toast('Optimality: '+d.error,'error');else setOpt(d);
+    }catch{toast('Optimality check failed','error');}finally{setLOpt(false);}
+  };
+  const doRisk=async()=>{
+    if(!node?.id)return;setLRisk(true);setRisk(null);
+    try{
+      const r=await fetch(`${API}/session/${sid}/risk`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({func_id:node.id})});
+      const d=await r.json();if(d.error)toast('Risk: '+d.error,'error');else setRisk(d);
+    }catch{toast('Risk check failed','error');}finally{setLRisk(false);}
+  };
+
+  if(!node||node.level!=='FUNCTION')return(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',gap:12,color:'#484f58'}}>
+      <span style={{fontSize:48}}>⚡</span>
+      <div style={{fontSize:14,color:'#8b949e'}}>Select a <strong style={{color:'#3fb950'}}>function</strong> from the tree to analyze</div>
+    </div>
+  );
+
+  const RatingLabel={1:'Poor',2:'Below Avg',3:'Average',4:'Good',5:'Excellent'};
+  const RatingColor={1:'#f85149',2:'#f0883e',3:'#d29922',4:'#58a6ff',5:'#3fb950'};
+  const rating=opt?.optimality?.rating||0;
+  const riskScore=risk?.risk_score||0;
+  const tier=risk?.risk_tier||'LOW';
+  const tierColor={HIGH:'#f85149',MEDIUM:'#d29922',LOW:'#3fb950'}[tier];
+
+  return(
+    <div className="anim-fade" style={{height:'100%',overflowY:'auto',padding:20,display:'flex',flexDirection:'column',gap:16}}>
+      {/* Fn header */}
+      <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+        <span style={{fontFamily:'monospace',fontWeight:700,fontSize:14,color:'#3fb950'}}>🔹 {node.name}</span>
+        <span style={{fontSize:11,color:'#8b949e'}}>{bn(node.file)} :{node.lineno}</span>
+        <AIBadge/>
+      </div>
+
+      {/* Optimality */}
+      <div className="card">
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+          <div style={{fontWeight:600,fontSize:13,display:'flex',alignItems:'center',gap:6}}>⚡ Function Optimality</div>
+          <button className="btn btn-blue" onClick={doOpt} disabled={lOpt}>
+            {lOpt?<Spin sz={12}/>:'🔍'}{lOpt?'Analyzing…':'Check Optimality'}
+          </button>
+        </div>
+
+        {lOpt&&<div style={{display:'flex',flexDirection:'column',gap:8}}><SkeletonCard/></div>}
+
+        {opt?.optimality&&!lOpt&&(
+          <div className="anim-fade" style={{display:'flex',flexDirection:'column',gap:12}}>
+            {/* Rating bar */}
+            <div style={{display:'flex',alignItems:'center',gap:12,padding:12,background:'#0d1117',borderRadius:8,border:'1px solid #21262d'}}>
+              <div style={{width:42,height:42,borderRadius:'50%',background:`${RatingColor[rating]}22`,border:`2px solid ${RatingColor[rating]}`,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:18,color:RatingColor[rating]}}>{rating}</div>
+              <div>
+                <div style={{fontWeight:600,fontSize:14,color:RatingColor[rating]}}>{RatingLabel[rating]||'?'}</div>
+                <Stars n={rating}/>
+              </div>
+              <div style={{marginLeft:'auto',fontSize:11,color:'#8b949e',textAlign:'right'}}>
+                {opt.optimality.time_complexity&&<div>Time: <span style={{color:'#bc8cff'}}>{opt.optimality.time_complexity}</span></div>}
+                {opt.optimality.space_complexity&&<div>Space: <span style={{color:'#bc8cff'}}>{opt.optimality.space_complexity}</span></div>}
+              </div>
+            </div>
+
+            {/* Issues */}
+            {(opt.optimality.issues||[]).map((iss,i)=>(
+              <div key={i} style={{background:'#0d1117',borderRadius:8,padding:10,border:'1px solid #21262d'}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                  <span style={{fontSize:10,fontWeight:700,color:'#d29922',textTransform:'uppercase',background:'#d2992215',padding:'1px 6px',borderRadius:4}}>{iss.type}</span>
+                  {iss.line_hint&&<span style={{fontSize:11,color:'#484f58'}}>line {iss.line_hint}</span>}
+                </div>
+                <div style={{fontSize:12.5,color:'#c9d1d9'}}>{iss.description}</div>
+              </div>
+            ))}
+
+            {/* Suggestions */}
+            {(opt.optimality.refactoring_suggestions||[]).map((s,i)=>(
+              <div key={i} style={{background:'#0a1f0a',borderRadius:8,padding:12,border:'1px solid #3fb95033'}}>
+                <div style={{fontSize:11,color:'#3fb950',fontWeight:600,marginBottom:6}}>💡 {s.description}</div>
+                {s.code_example&&(
+                  <pre style={{fontSize:11.5,background:'#0d1117',borderRadius:6,padding:10,overflowX:'auto',fontFamily:'monospace',color:'#8b949e',border:'1px solid #30363d',margin:0,whiteSpace:'pre-wrap'}}>{s.code_example}</pre>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!opt&&!lOpt&&(
+          <div style={{fontSize:12,color:'#484f58',textAlign:'center',padding:'16px 0'}}>Click "Check Optimality" to get an AI rating and suggestions</div>
+        )}
+      </div>
+
+      {/* Risk */}
+      <div className="card">
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+          <div style={{fontWeight:600,fontSize:13}}>💥 Blast Radius & Risk Score</div>
+          <button className="btn btn-red" onClick={doRisk} disabled={lRisk}>
+            {lRisk?<Spin sz={12}/>:'💥'}{lRisk?'Computing…':'Check Risk'}
+          </button>
+        </div>
+
+        {lRisk&&<SkeletonCard/>}
+
+        {risk&&!lRisk&&(
+          <div className="anim-fade" style={{display:'flex',flexDirection:'column',gap:12}}>
+            {/* Score bar */}
+            <div style={{background:'#0d1117',borderRadius:8,padding:14,border:'1px solid #21262d'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                <span style={{fontWeight:600,fontSize:22,color:tierColor}}>{riskScore.toFixed(1)}<span style={{fontSize:13,color:'#8b949e'}}>/10</span></span>
+                <span style={{fontSize:12,fontWeight:700,padding:'3px 10px',borderRadius:6,background:`${tierColor}22`,color:tierColor,border:`1px solid ${tierColor}44`}}>{tier} RISK</span>
+              </div>
+              <div className="prog-bar">
+                <div className="gauge-fill" style={{width:`${riskScore*10}%`,background:`linear-gradient(90deg,${tierColor}88,${tierColor})`}}/>
+              </div>
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              {[['Functions Affected',risk.dependent_count||0,'🔹'],['Files Affected',risk.file_spread||0,'📄']].map(([l,v,e])=>(
+                <div key={l} style={{background:'#0d1117',borderRadius:8,padding:12,border:'1px solid #21262d',textAlign:'center'}}>
+                  <div style={{fontSize:10,color:'#8b949e',marginBottom:4}}>{e} {l}</div>
+                  <div style={{fontSize:24,fontWeight:700,color:'#e6edf3'}}>{v}</div>
+                </div>
+              ))}
+            </div>
+
+            {risk.blast_radius_narrative&&(
+              <div style={{fontSize:12.5,color:'#c9d1d9',background:'#0d1117',borderRadius:8,padding:12,border:'1px solid #21262d',lineHeight:1.65}}>{risk.blast_radius_narrative}</div>
+            )}
+
+            {risk.partial_graph&&(
+              <div style={{fontSize:11,color:'#d29922',background:'#d2992210',borderRadius:6,padding:8,border:'1px solid #d2992230'}}>⚠ Partial graph — some files had syntax errors; score may be underestimated</div>
+            )}
+
+            {(risk.affected_functions||[]).length>0&&(
+              <div>
+                <div className="sec-hdr">Affected Functions</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+                  {risk.affected_functions.slice(0,20).map((f,i)=>(
+                    <span key={i} style={{background:'#21262d',border:'1px solid #30363d',color:'#8b949e',fontSize:11,padding:'2px 7px',borderRadius:5,fontFamily:'monospace'}}>{typeof f==='string'?f.split('::').pop():f.name||f}</span>
+                  ))}
+                  {risk.affected_functions.length>20&&<span style={{fontSize:11,color:'#484f58'}}>+{risk.affected_functions.length-20} more</span>}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!risk&&!lRisk&&(
+          <div style={{fontSize:12,color:'#484f58',textAlign:'center',padding:'16px 0'}}>Click "Check Risk" to see how changes to this function propagate</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Flow tab ──────────────────────────────────────────────────────
+const FlowTab=({sid,node,toast})=>{
+  const [flow,setFlow]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [pi,setPi]=useState(0);
+
+  const doFlow=async()=>{
+    if(!node?.id)return;setLoading(true);setFlow(null);setPi(0);
+    try{
+      const r=await fetch(`${API}/session/${sid}/flow`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({func_id:node.id})});
+      const d=await r.json();if(d.error)toast(d.error,'error');else setFlow(d);
+    }catch{toast('Flow analysis failed','error');}finally{setLoading(false);}
+  };
+
+  if(!node||node.level!=='FUNCTION')return(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',gap:12,color:'#484f58'}}>
+      <span style={{fontSize:48}}>🌊</span>
+      <div style={{fontSize:14,color:'#8b949e'}}>Select a <strong style={{color:'#3fb950'}}>function</strong> to trace its execution flow</div>
+    </div>
+  );
+
+  const paths=flow?.paths||[];
+  const cur=paths[pi];
+
+  return(
+    <div className="anim-fade" style={{height:'100%',overflowY:'auto',padding:20,display:'flex',flexDirection:'column',gap:16}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
+        <div>
+          <div style={{fontWeight:600,fontSize:14}}>🌊 Execution Flow</div>
+          <div style={{fontSize:12,color:'#8b949e',marginTop:2}}>Tracing paths to <span style={{fontFamily:'monospace',color:'#58a6ff'}}>{node.name}</span></div>
+        </div>
+        <button className="btn btn-purple" onClick={doFlow} disabled={loading}>
+          {loading?<Spin sz={12}/>:'🔍'}{loading?'Tracing paths…':'Trace Execution Flow'}
+        </button>
+      </div>
+
+      {loading&&(
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          <SkeletonCard/><SkeletonCard/>
+        </div>
+      )}
+
+      {flow&&!loading&&(
+        <div className="anim-fade">
+          {flow.dead_code_hint&&(
+            <div style={{background:'#1a1500',border:'1px solid #d2992244',borderRadius:10,padding:16,fontSize:13,color:'#d29922',lineHeight:1.6}}>
+              <strong>⚠ No execution paths found.</strong><br/>
+              <span style={{fontSize:12,color:'#8b949e'}}>This function may be dead code, called dynamically (callbacks, importlib, __getattr__), or entry points weren't detected in this project.</span>
+            </div>
+          )}
+
+          {paths.length>1&&(
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:4}}>
+              <span className="sec-hdr" style={{margin:0}}>Paths found:</span>
+              {paths.map((_,i)=>(
+                <button key={i} onClick={()=>setPi(i)}
+                  style={{padding:'4px 12px',borderRadius:7,fontSize:11,fontWeight:600,cursor:'pointer',border:`1px solid ${i===pi?'#58a6ff':'#30363d'}`,background:i===pi?'#1f6feb':'#21262d',color:i===pi?'#fff':'#8b949e'}}>
+                  Path {i+1}
+                </button>
+              ))}
+              <span style={{fontSize:11,color:'#484f58',marginLeft:'auto'}}>{flow.total_paths} path{flow.total_paths!==1?'s':''}</span>
+            </div>
+          )}
+
+          {cur&&(
+            <div className="card" style={{overflowX:'auto'}}>
+              <div className="sec-hdr">Execution Path {pi+1}</div>
+              <div style={{display:'flex',alignItems:'flex-start',gap:8,paddingBottom:4,flexWrap:'wrap'}}>
+                {cur.steps.map((step,i)=>(
+                  <React.Fragment key={step.func_id||i}>
+                    <div className={cls('flow-step',i===0&&'entry',i===cur.steps.length-1&&'target')}>
+                      <div style={{fontSize:10,color:'#8b949e',marginBottom:4}}>
+                        {i===0?'🟢 Entry Point':i===cur.steps.length-1?'🎯 Target':` Step ${i+1}`}
+                      </div>
+                      <div style={{fontFamily:'monospace',fontSize:11.5,fontWeight:700,color:'#e6edf3',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{step.name}</div>
+                      <div style={{fontSize:10,color:'#484f58',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{bn(step.file)}</div>
+                      {step.summary_short&&<div style={{fontSize:10,color:'#8b949e',marginTop:5,lineHeight:1.4,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{step.summary_short}</div>}
+                    </div>
+                    {i<cur.steps.length-1&&<span className="flow-arrow">→</span>}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!flow&&!loading&&(
+        <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#484f58',fontSize:13}}>
+          Click "Trace Execution Flow" to find how this function is reached from entry points
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Report tab ────────────────────────────────────────────────────
+const ReportTab=({sid,toast})=>{
+  const [rpt,setRpt]=useState(null);
+  const [loading,setLoading]=useState(false);
+
+  const gen=async()=>{
+    setLoading(true);
+    try{
+      const r=await fetch(`${API}/session/${sid}/report`,{method:'POST'});
+      const d=await r.json();if(d.error)toast(d.error,'error');else setRpt(d);
+    }catch{toast('Report generation failed','error');}finally{setLoading(false);}
+  };
+
+  if(!sid)return<div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'#484f58',fontSize:13}}>Upload a project first</div>;
+
+  const ReportItem=({item,isImprov})=>(
+    <div style={{background:'#0d1117',borderRadius:8,padding:12,border:'1px solid #21262d',marginBottom:8}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:6}}>
+        <SevBadge s={isImprov?item.priority:item.severity}/>
+        <span style={{fontWeight:600,fontSize:13,color:'#e6edf3'}}>{item.title}</span>
+      </div>
+      <p style={{fontSize:12.5,color:'#8b949e',lineHeight:1.6,marginBottom:item.remediation||item.suggestion?8:0}}>{item.description}</p>
+      {(item.remediation||item.suggestion)&&(
+        <div style={{fontSize:12,color:'#3fb950',borderTop:'1px solid #21262d',paddingTop:8}}>💡 {item.remediation||item.suggestion}</div>
+      )}
+      {item.affected_code&&<div style={{marginTop:6,fontSize:11,fontFamily:'monospace',color:'#484f58',background:'#161b2266',padding:'3px 8px',borderRadius:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.affected_code}</div>}
+    </div>
+  );
+
+  const Section=({emoji,title,items,isImprov})=>(
+    items?.length>0?(
+      <div className="card">
+        <div style={{fontWeight:600,fontSize:13,marginBottom:12}}>{emoji} {title} <span style={{fontWeight:400,color:'#484f58',fontSize:12}}>({items.length})</span></div>
+        {items.map((item,i)=><ReportItem key={i} item={item} isImprov={isImprov}/>)}
+      </div>
+    ):null
+  );
+
+  return(
+    <div className="anim-fade" style={{height:'100%',overflowY:'auto',padding:20,display:'flex',flexDirection:'column',gap:14}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,flexShrink:0}}>
+        <div>
+          <div style={{fontWeight:600,fontSize:14}}>📊 Project Health Report</div>
+          <div style={{fontSize:12,color:'#8b949e',marginTop:2}}>Two-stage analysis: web CVE search + AI findings</div>
+        </div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          {rpt&&<button className="btn btn-green" onClick={()=>window.open(`${API}/session/${sid}/report/export`,'_blank')}>⬇ Download .md</button>}
+          <button className="btn btn-blue" onClick={gen} disabled={loading}>
+            {loading?<Spin sz={12}/>:'📊'}{loading?'Generating…':'Generate Report'}
+          </button>
+        </div>
+      </div>
+
+      {loading&&(
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',flex:1,gap:16,color:'#8b949e'}}>
+          <Spin sz={44}/>
+          <div style={{fontSize:14,fontWeight:500}}>Running two-stage analysis…</div>
+          <div style={{fontSize:12,color:'#484f58',textAlign:'center',lineHeight:1.7}}>
+            Stage 1: Searching for CVEs and library issues<br/>
+            Stage 2: AI synthesizing findings with remediation steps
+          </div>
+        </div>
+      )}
+
+      {rpt&&!loading&&(
+        <div className="anim-fade" style={{display:'flex',flexDirection:'column',gap:14}}>
+          {!rpt.web_search_used&&<span className="no-web">⚠ Generated without live web verification</span>}
+          <AIBadge/>
+
+          {/* Summary card */}
+          {rpt.report?.summary&&(
+            <div className="card" style={{background:'linear-gradient(135deg,#161b22,#0d1a2d)'}}>
+              <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:10,gap:12}}>
+                <div style={{fontWeight:600,fontSize:13}}>Executive Summary</div>
+                <div style={{textAlign:'center',flexShrink:0}}>
+                  <div style={{fontSize:32,fontWeight:700,lineHeight:1,color:(rpt.report?.overall_score||0)>=70?'#3fb950':(rpt.report?.overall_score||0)>=40?'#d29922':'#f85149'}}>{rpt.report?.overall_score||'—'}</div>
+                  <div style={{fontSize:10,color:'#8b949e'}}>/ 100</div>
+                </div>
+              </div>
+              {/* Score bar */}
+              <div className="prog-bar" style={{marginBottom:12}}>
+                <div className="prog-fill" style={{width:`${rpt.report?.overall_score||0}%`,
+                  background:(rpt.report?.overall_score||0)>=70?'linear-gradient(90deg,#196c2e,#3fb950)':(rpt.report?.overall_score||0)>=40?'linear-gradient(90deg,#7d4e00,#d29922)':'linear-gradient(90deg,#8a1919,#f85149)'
+                }}/>
+              </div>
+              <p style={{fontSize:13,color:'#c9d1d9',lineHeight:1.7}}>{rpt.report.summary}</p>
+            </div>
+          )}
+
+          <Section emoji="🔴" title="Vulnerabilities" items={rpt.report?.vulnerabilities}/>
+          <Section emoji="🟡" title="Code Smells" items={rpt.report?.code_smells}/>
+          <Section emoji="🔵" title="Improvement Suggestions" items={rpt.report?.improvements} isImprov/>
+
+          {(rpt.sources||[]).length>0&&(
+            <div className="card">
+              <div className="sec-hdr">Web Sources</div>
+              {rpt.sources.slice(0,6).map((s,i)=>(
+                <a key={i} href={s} target="_blank" rel="noopener noreferrer"
+                  style={{display:'block',fontSize:12,color:'#58a6ff',marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textDecoration:'none'}}
+                  onMouseEnter={e=>e.target.style.textDecoration='underline'}
+                  onMouseLeave={e=>e.target.style.textDecoration='none'}>{s}</a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!rpt&&!loading&&(
+        <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,color:'#484f58'}}>
+          <span style={{fontSize:52}}>📊</span>
+          <div style={{fontSize:14,color:'#8b949e',fontWeight:500}}>Generate a full project health report</div>
+          <div style={{fontSize:12,color:'#484f58',textAlign:'center',lineHeight:1.7}}>Searches for CVEs in your dependencies, then uses AI<br/>to generate severity-graded findings with remediation steps.</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Severity badge ────────────────────────────────────────────────
+const SevBadge=({s})=>{
+  const c={HIGH:'H',MEDIUM:'M',LOW:'L'}[s]||'L';
+  return<span className={cls('sev','sev-'+c)}>{s||'INFO'}</span>;
+};
+
+// ── Chat panel ────────────────────────────────────────────────────
+const ChatPanel=({sid,tree,onJump,toast})=>{
+  const [msgs,setMsgs]=useState([
+    {role:'ai',content:'👋 Hi! I\'m your CodeAtlas AI. Ask me anything about your codebase — I\'ll search the code and give you grounded answers.',cited:[]}
+  ]);
+  const [inp,setInp]=useState('');
+  const [loading,setLoading]=useState(false);
+  const bottom=useRef();
+  useEffect(()=>bottom.current?.scrollIntoView({behavior:'smooth'}),[msgs]);
+
+  const send=async()=>{
+    if(!inp.trim()||!sid||loading)return;
+    const q=inp.trim();setInp('');
+    setMsgs(m=>[...m,{role:'user',content:q,cited:[]}]);
+    setLoading(true);
+    try{
+      const hist=msgs.slice(-8).map(m=>({role:m.role==='user'?'user':'model',content:m.content}));
+      const r=await fetch(`${API}/session/${sid}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,chat_history:hist})});
+      const d=await r.json();
+      setMsgs(m=>[...m,{role:'ai',content:d.answer||'No answer generated.',cited:d.cited_functions||[]}]);
+    }catch{setMsgs(m=>[...m,{role:'ai',content:'⚠ Connection error — is the backend running?',cited:[]}]);}
+    finally{setLoading(false);}
+  };
+
+  const SUGGESTIONS=["What does this codebase do?","List all entry points","What are the main classes?","Find functions with most dependencies","How does the data flow work?"];
+
+  return(
+    <div style={{width:300,minWidth:300,display:'flex',flexDirection:'column',height:'100%',background:'#161b22',borderLeft:'1px solid #30363d'}}>
+      {/* Header */}
+      <div style={{padding:'12px 14px',borderBottom:'1px solid #30363d',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{width:28,height:28,borderRadius:6,background:'linear-gradient(135deg,#388bfd,#bc8cff)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14}}>💬</div>
+          <div>
+            <div style={{fontWeight:600,fontSize:13,color:'#e6edf3'}}>Explorer Chat</div>
+            <div style={{fontSize:10,color:'#8b949e'}}>RAG-powered · Codebase-grounded</div>
+          </div>
+          <span style={{marginLeft:'auto'}}><AIBadge/></span>
+        </div>
+        {!sid&&<div style={{marginTop:8,fontSize:11,color:'#d29922',background:'#d2992210',borderRadius:5,padding:'4px 8px'}}>Upload a project to enable chat</div>}
+      </div>
+
+      {/* Messages */}
+      <div style={{flex:1,overflowY:'auto',padding:'10px 10px 4px',display:'flex',flexDirection:'column',gap:10}}>
+        {msgs.map((m,i)=>(
+          <div key={i} className="anim-slide" style={{display:'flex',justifyContent:m.role==='user'?'flex-end':'flex-start'}}>
+            <div className={m.role==='user'?'bubble-user':'bubble-ai'}
+              style={{maxWidth:'88%',padding:'9px 12px',fontSize:12.5,lineHeight:1.65,color:m.role==='user'?'#fff':'#c9d1d9'}}>
+              {m.role==='ai'&&<div style={{marginBottom:5}}><AIBadge/></div>}
+              <div style={{whiteSpace:'pre-wrap'}}>{m.content}</div>
+              {(m.cited||[]).length>0&&(
+                <div style={{marginTop:8,display:'flex',flexWrap:'wrap',gap:4}}>
+                  {m.cited.map((cf,j)=>(
+                    <button key={j} onClick={()=>onJump(cf)}
+                      style={{fontSize:10.5,padding:'2px 8px',borderRadius:5,background:'#58a6ff18',color:'#58a6ff',border:'1px solid #58a6ff33',cursor:'pointer',fontFamily:'monospace',fontWeight:500}}>
+                      → {cf.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        {loading&&(
+          <div style={{display:'flex',justifyContent:'flex-start'}}>
+            <div className="bubble-ai" style={{padding:'9px 14px',fontSize:12,color:'#8b949e',display:'flex',alignItems:'center',gap:8}}>
+              <Spin sz={11}/> <span className="anim-pulse">Searching codebase…</span>
+            </div>
+          </div>
+        )}
+        <div ref={bottom}/>
+      </div>
+
+      {/* Suggestions */}
+      {msgs.length<=1&&sid&&(
+        <div style={{padding:'0 10px 6px',display:'flex',flexDirection:'column',gap:4}}>
+          <div style={{fontSize:10,color:'#484f58',paddingLeft:2}}>Try asking:</div>
+          {SUGGESTIONS.slice(0,3).map(s=>(
+            <button key={s} onClick={()=>{setInp(s);}}
+              style={{textAlign:'left',padding:'6px 10px',borderRadius:7,background:'#21262d',border:'1px solid #30363d',color:'#8b949e',fontSize:11,cursor:'pointer'}}
+              className="tree-item">
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <div style={{padding:'8px 10px',borderTop:'1px solid #30363d',flexShrink:0}}>
+        <div style={{display:'flex',gap:6}}>
+          <input className="inp" style={{fontSize:12.5}}
+            placeholder={sid?'Ask anything about your code…':'Upload a project first'}
+            value={inp} disabled={!sid||loading}
+            onChange={e=>setInp(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()}/>
+          <button onClick={send} disabled={!sid||loading||!inp.trim()}
+            className="btn btn-solid-blue"
+            style={{padding:'6px 12px',borderRadius:8,fontSize:15,flexShrink:0}}>➤</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── TABS ──────────────────────────────────────────────────────────
+const TABS=[{id:'home',label:'🏠 Home'},{id:'overview',label:'🌳 Overview'},{id:'detail',label:'⚡ Detail'},{id:'flow',label:'🌊 Flow'},{id:'report',label:'📊 Report'}];
+
+// ── APP ROOT ──────────────────────────────────────────────────────
+function App(){
+  const [sid,setSid]=useState(null);
+  const [tree,setTree]=useState(null);
+  const [sel,setSel]=useState(null);
+  const [tab,setTab]=useState('home');
+  const [uploading,setUploading]=useState(false);
+  const [progress,setProgress]=useState(null);
+  const [sumStatus,setSumStatus]=useState(null); // background summarization status
+  const pollRef=useRef(null);
+  const {toasts,toast,rmToast}=useToast();
+
+  // Poll /status while summarization runs
+  const startPolling=useCallback((sessionId)=>{
+    if(pollRef.current)clearInterval(pollRef.current);
+    pollRef.current=setInterval(async()=>{
+      try{
+        const r=await fetch(`${API}/session/${sessionId}/status`);
+        if(!r.ok)return;
+        const s=await r.json();
+        setSumStatus(s);
+        if(s.finished||s.tree_ready){
+          clearInterval(pollRef.current);pollRef.current=null;
+          if(s.error){toast('AI summarization error: '+s.error,'error');}
+          else{toast('✅ AI summaries complete!','success');}
+          // Fetch the completed tree
+          const tr=await fetch(`${API}/session/${sessionId}/tree`);
+          if(tr.ok){setTree(await tr.json());setSumStatus(null);}
+        }
+      }catch{}
+    },2000);
+  },[toast]);
+
+  useEffect(()=>()=>pollRef.current&&clearInterval(pollRef.current),[]);
+
+  const upload=async file=>{
+    if(!file.name.endsWith('.zip')){toast('Please upload a .zip file','error');return;}
+    setUploading(true);setProgress({stage:'Reading file…',pct:10});
+    const fd=new FormData();fd.append('file',file);
+    if(sid)fd.append('session_id',sid);
+    try{
+      setProgress({stage:'Uploading & extracting…',pct:25});
+      const r=await fetch(`${API}/upload`,{method:'POST',body:fd});
+      if(!r.ok){const e=await r.json().catch(()=>({detail:'Upload failed'}));throw new Error(e.detail||'Upload failed');}
+      const data=await r.json();
+      setProgress({stage:'Parsing AST…',pct:60});
+      setSid(data.session_id);
+      setProgress({stage:'Starting AI summarization…',pct:80});
+      toast(`✅ ${data.py_files_count} Python files parsed`,'success');
+      if(data.summarizing){
+        setSumStatus({stage:'Starting AI summarization…',finished:false,error:null});
+        startPolling(data.session_id);
+        setTab('overview');
+      }
+      setProgress({stage:'Done!',pct:100});
+    }catch(e){toast(e.message||'Upload failed','error');}
+    finally{setUploading(false);setTimeout(()=>setProgress(null),800);}
+  };
+
+  const selNode=n=>{setSel(n);if(tab==='home')setTab('overview');};
+
+  const jumpFn=cf=>{
+    if(!tree?.all_functions?.[cf.func_id])return;
+    const fn=tree.all_functions[cf.func_id];
+    setSel({id:cf.func_id,name:cf.name,level:'FUNCTION',lineno:fn.lineno,endLineno:fn.end_lineno,source:fn.source_snippet,summary:fn.summary,file:fn.file||fn.filepath,callers:fn.callers||[],callees:fn.callees||[]});
+    setTab('overview');
+  };
+
+  const retryAI=async()=>{
+    if(!sid)return;toast('Retrying AI summaries…','info');
+    try{
+      await fetch(`${API}/session/${sid}/retry_summarization`,{method:'POST'});
+      const tr=await fetch(`${API}/session/${sid}/tree`);
+      if(tr.ok){setTree(await tr.json());toast('✅ Summaries updated','success');}
+    }catch{toast('Retry failed','error');}
+  };
+
+  return(
+    <div style={{display:'flex',height:'100vh',overflow:'hidden',background:'#0d1117'}}>
+      <Sidebar sid={sid} tree={tree} sel={sel} onSel={selNode} onUpload={upload} uploading={uploading} progress={progress}/>
+
+      <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden',position:'relative'}}>
+        {/* Tab bar */}
+        <div style={{display:'flex',alignItems:'center',borderBottom:'1px solid #30363d',background:'#161b22',paddingLeft:4,flexShrink:0,height:42}}>
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} className={cls('tab',tab===t.id&&'active')}>{t.label}</button>
+          ))}
+          {/* Summarization indicator in tab bar */}
+          {sumStatus&&!sumStatus.finished&&(
+            <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:8,fontSize:11,color:'#58a6ff',background:'#1f6feb15',border:'1px solid #1f6feb33',borderRadius:6,padding:'2px 10px'}}>
+              <Spin sz={10}/> {sumStatus.stage||'AI working…'}
+            </div>
+          )}
+          {tree&&tab!=='home'&&(
+            <button onClick={retryAI} className="btn btn-yellow" style={{marginLeft:'auto',marginRight:8,padding:'4px 10px',fontSize:11}}>🔄 Retry AI</button>
+          )}
+        </div>
+
+        {/* Tab content */}
+        <div style={{flex:1,overflow:'hidden',position:'relative'}}>
+          {tab==='home'&&<WelcomeHome onUpload={upload} uploading={uploading} progress={progress}/>}
+          {tab==='overview'&&<OverviewTab tree={tree} node={sel}/>}
+          {tab==='detail'&&<DetailTab sid={sid} node={sel} toast={toast}/>}
+          {tab==='flow'&&<FlowTab sid={sid} node={sel} toast={toast}/>}
+          {tab==='report'&&<ReportTab sid={sid} toast={toast}/>}
+          {/* Summarization overlay (non-blocking) */}
+          {sumStatus&&!sumStatus.finished&&<SumProgress status={sumStatus}/>}
+        </div>
+      </div>
+
+      <ChatPanel sid={sid} tree={tree} onJump={jumpFn} toast={toast}/>
+      <Toasts T={toasts} rm={rmToast}/>
+    </div>
+  );
+}
+
+// ── Home / Welcome screen ─────────────────────────────────────────
+const WelcomeHome=({onUpload,uploading,progress})=>(
+  <div style={{height:'100%',overflowY:'auto',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:40,gap:32}}>
+    <div style={{textAlign:'center'}}>
+      <div style={{width:72,height:72,borderRadius:20,background:'linear-gradient(135deg,#1f6feb 0%,#388bfd 50%,#bc8cff 100%)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:36,margin:'0 auto 16px',boxShadow:'0 8px 32px #1f6feb44'}}>🗺️</div>
+      <h1 style={{fontSize:28,fontWeight:800,color:'#e6edf3',letterSpacing:'-.5px'}}>CodeAtlas</h1>
+      <p style={{fontSize:13,color:'#8b949e',marginTop:6}}>AI-powered Python code analysis & documentation platform</p>
+    </div>
+
+    {/* Feature grid */}
+    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,maxWidth:560,width:'100%'}}>
+      {[
+        {e:'🌳',t:'Layered Overview',d:'File→Block→Function drill-down with AI summaries',c:'#58a6ff'},
+        {e:'📊',t:'Project Report',d:'CVE scan + AI-graded findings',c:'#f0883e'},
+        {e:'⚡',t:'Optimality Check',d:'Complexity analysis & refactoring suggestions',c:'#d29922'},
+        {e:'💥',t:'Blast Radius',d:'Call-graph risk score 0–10 with impact analysis',c:'#f85149'},
+        {e:'🌊',t:'Execution Flow',d:'Trace entry-point → function paths visually',c:'#bc8cff'},
+        {e:'💬',t:'RAG Chat',d:'Natural-language Q&A grounded in your code',c:'#3fb950'},
+      ].map(({e,t,d,c})=>(
+        <div key={t} style={{background:'#161b22',border:'1px solid #30363d',borderRadius:10,padding:14,transition:'border .15s',cursor:'default'}}
+          onMouseEnter={ev=>ev.currentTarget.style.borderColor=c+'66'}
+          onMouseLeave={ev=>ev.currentTarget.style.borderColor='#30363d'}>
+          <div style={{fontSize:22,marginBottom:6}}>{e}</div>
+          <div style={{fontSize:12,fontWeight:600,color:c,marginBottom:4}}>{t}</div>
+          <div style={{fontSize:11,color:'#8b949e',lineHeight:1.5}}>{d}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* Upload zone */}
+    <div style={{maxWidth:360,width:'100%'}}>
+      <DropZone onFile={onUpload} uploading={uploading} progress={progress}/>
+    </div>
+
+    <div style={{textAlign:'center',fontSize:11,color:'#484f58',lineHeight:1.8}}>
+      Strictly static analysis — your code is <strong style={{color:'#e6edf3'}}>never executed or imported</strong><br/>
+      <AIBadge/>
+    </div>
+  </div>
+);
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

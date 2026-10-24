@@ -41,7 +41,7 @@ logging.basicConfig(
 # ---------------------------------------------------------------------------
 load_dotenv()
 
-_GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
+_GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 _FUNCTION_BATCH_SIZE: int = 5           # smaller batches → fewer 503s
 _INTER_BATCH_DELAY_SECONDS: float = 0.3 # reduced delay with flash-lite
 _MAX_RETRIES: int = 3                   # retries on 503 / transient errors
@@ -329,6 +329,7 @@ def build_function_tree(
         len(tree["all_functions"]),
         llm_available,
     )
+    tree["functions"] = tree["all_functions"]
     return tree
 
 

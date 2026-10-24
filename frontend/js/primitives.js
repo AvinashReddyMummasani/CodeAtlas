@@ -103,7 +103,7 @@ const SumProgress = ({ status }) => {
         <div className="prog-bar" style={{ marginBottom: 10 }}>
           <div className="prog-fill anim-pulse" style={{ width: '65%' }} />
         </div>
-        <div style={{ fontSize: 11, color: '#484f58' }}>Using gemini-2.0-flash-lite · You can browse the tree while this runs</div>
+        <div style={{ fontSize: 11, color: '#484f58' }}>Using gemini-3.5-flash-lite · You can browse the tree while this runs</div>
         {status.error && (
           <div style={{ marginTop: 12, fontSize: 11, color: '#f85149', background: '#f8514910', borderRadius: 6, padding: '6px 10px' }}>
             ⚠ {status.error}

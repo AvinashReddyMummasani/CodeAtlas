@@ -47,7 +47,7 @@ def _build_graph(function_tree: dict) -> nx.DiGraph:
                 G.add_edge(edge[0], edge[1])
 
     # Ensure all known functions are nodes (even isolated ones)
-    for func_id in function_tree.get("functions", {}):
+    for func_id in (function_tree.get("all_functions") or function_tree.get("functions", {})):
         G.add_node(func_id)
 
     return G
@@ -55,7 +55,7 @@ def _build_graph(function_tree: dict) -> nx.DiGraph:
 
 def _build_step(func_id: str, function_tree: dict) -> dict:
     """Build a single path-step dict for *func_id*."""
-    func = function_tree.get("functions", {}).get(func_id, {})
+    func = (function_tree.get("all_functions") or function_tree.get("functions", {})).get(func_id, {})
     full_summary = func.get("summary", "")
     # Truncate summary to ≤120 chars for readability
     summary_short = (full_summary[:117] + "…") if len(full_summary) > 120 else full_summary
@@ -94,7 +94,7 @@ def find_execution_paths(target_func_id: str, function_tree: dict) -> dict:
         dead_code_hint  : bool  (True when no path found from any entry point)
         error           : None or str
     """
-    functions = function_tree.get("functions", {})
+    functions = (function_tree.get("all_functions") or function_tree.get("functions", {}))
     target    = functions.get(target_func_id, {})
     target_name = target.get("name", target_func_id)
 

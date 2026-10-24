@@ -24,7 +24,7 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import key_manager
 
-_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-lite')
+_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite')
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +81,7 @@ def _generate_summary(source: str, name: str) -> str:
 
 def _lookup_function(func_id: str, function_tree: dict) -> dict | None:
     """Return the function metadata dict for *func_id*, or None if not found."""
-    return function_tree.get("functions", {}).get(func_id)
+    return (function_tree.get("all_functions") or function_tree.get("functions", {})).get(func_id)
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +114,7 @@ def check_function_optimality(func_id: str, function_tree: dict) -> dict:
         }
 
     name    = func.get("name", func_id)
-    source  = func.get("source", "")
+    source  = func.get("source_snippet") or func.get("source", "")
     summary = func.get("summary", "")
 
     # If no summary exists, generate one via Gemini
@@ -239,7 +239,7 @@ def bulk_check_file(filepath: str, function_tree: dict) -> list[dict]:
 
     matching_ids = [
         fid
-        for fid, fdata in function_tree.get("functions", {}).items()
+        for fid, fdata in (function_tree.get("all_functions") or function_tree.get("functions", {})).items()
         if fdata.get("file", "").replace("\\", "/").lower() == norm_target
     ]
 

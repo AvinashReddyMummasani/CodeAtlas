@@ -16,6 +16,7 @@ import re
 import sys
 import textwrap
 from typing import Any
+from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -25,7 +26,7 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import key_manager
 
-_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-lite')
+_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite')
 
 
 # ---------------------------------------------------------------------------

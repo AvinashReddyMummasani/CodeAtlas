@@ -23,8 +23,9 @@ load_dotenv()
 # ensure backend/ is on path so key_manager can be found
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import key_manager
+import networkx as nx
 
-_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-lite')
+_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite')
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +59,7 @@ def _build_graph(function_tree: dict) -> nx.DiGraph:
                 G.add_edge(edge[0], edge[1])
 
     # Ensure every function in the tree is a node
-    for func_id in function_tree.get("functions", {}):
+    for func_id in (function_tree.get("all_functions") or function_tree.get("functions", {})):
         G.add_node(func_id)
 
     return G
@@ -134,7 +135,7 @@ def compute_risk_score(func_id: str, function_tree: dict) -> dict:
                     file_spread, affected_functions, affected_files,
                     blast_radius_narrative, partial_graph, error
     """
-    functions = function_tree.get("functions", {})
+    functions = (function_tree.get("all_functions") or function_tree.get("functions", {}))
     func      = functions.get(func_id)
 
     if func is None:
@@ -233,7 +234,7 @@ def rank_file_by_risk(filepath: str, function_tree: dict) -> list[dict]:
 
     matching_ids = [
         fid
-        for fid, fdata in function_tree.get("functions", {}).items()
+        for fid, fdata in (function_tree.get("all_functions") or function_tree.get("functions", {})).items()
         if fdata.get("file", "").replace("\\", "/").lower() == norm_target
     ]
 

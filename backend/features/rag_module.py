@@ -37,7 +37,7 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import key_manager
 
-_GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
+_GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 _EMBEDDING_MODEL: str = os.getenv(
     "GEMINI_EMBEDDING_MODEL", "models/text-embedding-004"
 )

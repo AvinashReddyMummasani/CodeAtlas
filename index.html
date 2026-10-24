@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeAtlas — AI Code Intelligence Platform</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Prism.js Syntax Highlighting for Python -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  
+  <!-- React 18 & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  
+  <!-- Babel Standalone for in-browser JSX compilation -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Tailwind theme configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            s: {
+              900: '#0d1117',
+              800: '#161b22',
+              700: '#21262d',
+              600: '#30363d',
+              500: '#484f58',
+              400: '#8b949e',
+              300: '#b1bac4',
+              200: '#c9d1d9',
+              100: '#e6edf3'
+            },
+            a: '#58a6ff',
+            g: '#3fb950',
+            y: '#d29922',
+            r: '#f85149',
+            p: '#bc8cff',
+            o: '#f0883e'
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #161b22; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+    /* Prism Syntax Highlighting adjustments */
+    pre[class*=language-] { margin: 0; font-size: 12.5px; background: transparent !important; padding: 0; }
+    code[class*=language-] { font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace !important; font-size: 12.5px; }
+
+    /* Animations */
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+    @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+    @keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 #58a6ff33; } 50% { box-shadow: 0 0 0 6px #58a6ff11; } }
+
+    .anim-pulse { animation: pulse 1.5s ease-in-out infinite; }
+    .anim-spin  { animation: spin 0.9s linear infinite; }
+    .anim-fade  { animation: fadeIn 0.25s ease both; }
+    .anim-slide { animation: slideIn 0.2s ease both; }
+    .anim-glow  { animation: glow 2s ease-in-out infinite; }
+
+    @keyframes flowDash { to { stroke-dashoffset: -24; } }
+    .anim-flow-dash { animation: flowDash 1s linear infinite; }
+
+    .graph-canvas-bg {
+      background-color: #0d1117;
+      background-image: radial-gradient(#21262d 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+    }
+    .graph-node-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px #00000066;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .graph-node-card:hover {
+      border-color: #58a6ff88;
+      background: #1c2433;
+    }
+    .graph-node-card.selected {
+      border-color: #58a6ff !important;
+      box-shadow: 0 0 20px #58a6ff66 !important;
+      background: #1d2d44 !important;
+    }
+    .graph-node-card.flow-active {
+      border-color: #388bfd !important;
+      box-shadow: 0 0 24px #388bfd88 !important;
+      animation: glow 1.6s ease-in-out infinite;
+    }
+
+    /* Skeleton loader */
+    .skeleton {
+      background: linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%);
+      background-size: 400px 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+      border-radius: 4px;
+    }
+
+    /* Active line highlight in CodeViewer */
+    .hi-line {
+      background: #58a6ff18;
+      border-left: 2.5px solid #58a6ff;
+      padding-left: 6px !important;
+    }
+
+    /* Sidebar and Interactive tree items */
+    .tree-item {
+      transition: background 0.12s, color 0.12s;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .tree-item:hover { background: #1f2937; }
+    .tree-item.selected { background: #1d3557; color: #58a6ff; }
+
+    .tree-node-row {
+      transition: background 0.15s ease, border-color 0.15s ease;
+      user-select: none;
+    }
+    .tree-node-row:hover {
+      background: #161b22 !important;
+    }
+    .tree-node-row.selected {
+      background: #1f6feb22 !important;
+      border-color: #58a6ff88 !important;
+    }
+    .tree-node-row.flow-active {
+      box-shadow: 0 0 12px #58a6ff44;
+      animation: glow 1.8s ease-in-out infinite;
+    }
+
+    /* Navigation tabs */
+    .tab {
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #8b949e;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .tab:hover { color: #c9d1d9; }
+    .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+
+    /* Badges */
+    .ai-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #f0883e;
+      background: #f0883e15;
+      border: 1px solid #f0883e33;
+      border-radius: 4px;
+      padding: 2px 7px;
+      letter-spacing: 0.03em;
+    }
+    .no-web {
+      font-size: 10px;
+      color: #d29922;
+      background: #d2992215;
+      border: 1px solid #d2992233;
+      border-radius: 4px;
+      padding: 2px 7px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-blue { background: #58a6ff22; color: #58a6ff; }
+    .btn-blue:hover:not(:disabled) { background: #58a6ff33; }
+    .btn-green { background: #3fb95022; color: #3fb950; }
+    .btn-green:hover:not(:disabled) { background: #3fb95033; }
+    .btn-red { background: #f8514922; color: #f85149; }
+    .btn-red:hover:not(:disabled) { background: #f8514933; }
+    .btn-purple { background: #bc8cff22; color: #bc8cff; }
+    .btn-purple:hover:not(:disabled) { background: #bc8cff33; }
+    .btn-yellow { background: #d2992222; color: #d29922; }
+    .btn-yellow:hover:not(:disabled) { background: #d2992233; }
+    .btn-solid-blue { background: #1f6feb; color: #fff; }
+    .btn-solid-blue:hover:not(:disabled) { background: #388bfd; }
+
+    /* Surface Card */
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    /* Drop Zone */
+    .dropzone {
+      border: 2px dashed #30363d;
+      border-radius: 10px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .dropzone:hover, .dropzone.drag {
+      border-color: #58a6ff;
+      background: #58a6ff08;
+    }
+
+    /* Chat Bubbles */
+    .bubble-user {
+      background: linear-gradient(135deg, #1f6feb, #1a5cb8);
+      border-radius: 14px 14px 3px 14px;
+    }
+    .bubble-ai {
+      background: #1f2937;
+      border: 1px solid #30363d;
+      border-radius: 14px 14px 14px 3px;
+    }
+
+    /* Progress bar */
+    .prog-bar {
+      height: 4px;
+      background: #21262d;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .prog-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #1f6feb, #58a6ff);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    /* Risk gauge */
+    .gauge-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.5s ease;
+    }
+
+    /* Severity badges */
+    .sev-H { background: #f8514922; color: #f85149; border: 1px solid #f8514944; }
+    .sev-M { background: #d2992222; color: #d29922; border: 1px solid #d2992244; }
+    .sev-L { background: #3fb95022; color: #3fb950; border: 1px solid #3fb95044; }
+    .sev { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+
+    /* Execution flow diagram step cards */
+    .flow-step {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 12px 14px;
+      min-width: 120px;
+      max-width: 170px;
+      flex-shrink: 0;
+    }
+    .flow-step.entry { border-color: #3fb95066; background: #3fb95009; }
+    .flow-step.target { border-color: #58a6ff66; background: #58a6ff09; }
+    .flow-arrow { font-size: 18px; color: #58a6ff; flex-shrink: 0; font-weight: 700; align-self: center; }
+
+    /* Inputs */
+    .inp {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #e6edf3;
+      outline: none;
+      transition: border 0.15s;
+      width: 100%;
+    }
+    .inp:focus { border-color: #58a6ff66; }
+
+    .sec-hdr {
+      font-size: 11px;
+      font-weight: 700;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Modular React Application Scripts (with cache-busting query strings) -->
+  <script type="text/babel" src="js/utils.js?v=20261024_auth"></script>
+  <script type="text/babel" src="js/primitives.js?v=20261024_auth"></script>
+  <script type="text/babel" src="js/sidebar.js?v=20261024_auth"></script>
+  <script type="text/babel" src="js/tabs.js?v=20261024_auth"></script>
+  <script type="text/babel" src="js/chat.js?v=20261024_auth"></script>
+  <script type="text/babel" src="js/app.js?v=20261024_auth"></script>
+</body>
+</html>

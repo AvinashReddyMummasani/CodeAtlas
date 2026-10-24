@@ -21,7 +21,11 @@ from fastapi import UploadFile
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-SESSIONS_ROOT = Path("sessions")
+import os
+_HERE = Path(__file__).resolve().parent
+_PROJECT_ROOT = _HERE.parent
+_DEFAULT_SESSIONS = _PROJECT_ROOT / "sessions"
+SESSIONS_ROOT = Path(os.getenv("SESSION_DIR", str(_DEFAULT_SESSIONS))).resolve()
 ZIP_MAGIC = b"PK\x03\x04"           # Local file header signature
 MAX_TOTAL_UNCOMPRESSED_MB = 500
 MAX_TOTAL_UNCOMPRESSED_BYTES = MAX_TOTAL_UNCOMPRESSED_MB * 1024 * 1024

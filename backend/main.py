@@ -15,6 +15,7 @@ Environment variables (loaded from .env in the project root):
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -106,7 +107,7 @@ _CORS_ORIGINS: list[str] = (
     else [o.strip() for o in _CORS_ORIGINS_RAW.split(",") if o.strip()]
 )
 _MAX_UPLOAD_MB: int = int(os.getenv("MAX_UPLOAD_MB", "50"))
-_SESSION_DIR: str = os.getenv("SESSION_DIR", "sessions")
+_SESSION_DIR: str = os.getenv("SESSION_DIR", str(_HERE.parent / "sessions"))
 _FRONTEND_DIR: Path = _HERE.parent / "frontend"
 
 # ---------------------------------------------------------------------------
@@ -118,12 +119,37 @@ sessions: dict[str, dict] = {}
 # ---------------------------------------------------------------------------
 # Session status helpers
 # ---------------------------------------------------------------------------
+def _save_session_state(session_id: str) -> None:
+    """Persist session status and tree to disk so sessions survive server reloads."""
+    session = sessions.get(session_id)
+    if not session:
+        return
+    sdir = session.get("session_dir")
+    if not sdir or not Path(sdir).exists():
+        return
+    try:
+        meta_file = Path(sdir) / "session_meta.json"
+        with open(meta_file, "w", encoding="utf-8") as f:
+            json.dump({
+                "session_id": session_id,
+                "status": session.get("status", {}),
+                "has_tree": session.get("function_tree") is not None,
+            }, f)
+        tree = session.get("function_tree")
+        if tree is not None:
+            tree_file = Path(sdir) / "function_tree.json"
+            with open(tree_file, "w", encoding="utf-8") as f:
+                json.dump(tree, f)
+    except Exception as exc:
+        logger.warning("Could not persist session '%s' to disk: %s", session_id, exc)
+
 def _set_status(session_id: str, stage: str, done: int = 0, total: int = 0) -> None:
     if session_id in sessions:
         sessions[session_id]["status"] = {
             "stage": stage, "done": done, "total": total,
             "finished": False, "error": None,
         }
+        _save_session_state(session_id)
 
 def _finish_status(session_id: str, error: str | None = None) -> None:
     if session_id in sessions:
@@ -131,6 +157,7 @@ def _finish_status(session_id: str, error: str | None = None) -> None:
         s["finished"] = True
         s["error"] = error
         sessions[session_id]["status"] = s
+        _save_session_state(session_id)
 
 # ---------------------------------------------------------------------------
 # FastAPI application
@@ -219,10 +246,47 @@ class ChatRequest(BaseModel):
 
 
 def _get_session(session_id: str) -> dict:
-    """Return the session dict or raise HTTP 404."""
-    if session_id not in sessions:
-        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
-    return sessions[session_id]
+    """Return the session dict or raise HTTP 404. Also recovers from disk if server reloaded."""
+    if session_id in sessions:
+        return sessions[session_id]
+
+    # Check if session exists on disk
+    candidate_paths = [
+        Path(_SESSION_DIR) / session_id,
+        _HERE.parent / "sessions" / session_id,
+        _HERE / "sessions" / session_id,
+    ]
+    for sess_path in candidate_paths:
+        if sess_path.exists():
+            tree = None
+            tree_file = sess_path / "function_tree.json"
+            if tree_file.exists():
+                try:
+                    with open(tree_file, "r", encoding="utf-8") as f:
+                        tree = json.load(f)
+                except Exception:
+                    pass
+
+            meta_file = sess_path / "session_meta.json"
+            status = {"stage": "Ready", "finished": True, "error": None}
+            if meta_file.exists():
+                try:
+                    with open(meta_file, "r", encoding="utf-8") as f:
+                        meta = json.load(f)
+                        status = meta.get("status", status)
+                except Exception:
+                    pass
+
+            recovered = {
+                "function_tree": tree,
+                "session_dir": str(sess_path),
+                "status": status,
+            }
+            sessions[session_id] = recovered
+            logger.info("Recovered session '%s' from disk storage.", session_id)
+            return recovered
+
+    raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
 
 
 def _get_tree(session_id: str) -> dict:
@@ -762,5 +826,7 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=True,
+        reload_dirs=[str(_HERE)],
+        reload_excludes=["sessions*", "chroma_store*", "*.zip", "*.json"],
         log_level="info",
     )

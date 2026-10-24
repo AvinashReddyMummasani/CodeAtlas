@@ -15,6 +15,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any
+import sys
 
 import chromadb
 from dotenv import load_dotenv
@@ -39,9 +40,11 @@ import key_manager
 
 _GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 _EMBEDDING_MODEL: str = os.getenv(
-    "GEMINI_EMBEDDING_MODEL", "models/text-embedding-004"
+    "GEMINI_EMBEDDING_MODEL", "models/gemini-embedding-001"
 )
-_CHROMA_DIR: str = os.getenv("CHROMA_DIR", "chroma_store")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_DEFAULT_CHROMA = str(_PROJECT_ROOT / "chroma_store")
+_CHROMA_DIR: str = os.getenv("CHROMA_DIR", _DEFAULT_CHROMA)
 
 _llm = True  # key_manager handles actual API calls
 
@@ -101,16 +104,16 @@ def _iter_indexable_nodes(function_tree: dict):
                 bnode.get("summary", ""),
                 bnode.get("source_snippet", ""),
             )
-        # LOGICAL_BLOCK nodes
-        for lb_id, lbnode in file_node.get("logical_blocks", {}).items():
+        # File-level overview node
+        if file_node.get("summary"):
             yield (
-                lb_id,
-                lbnode.get("name", lb_id),
                 filepath,
-                lbnode.get("level", "logical_block"),
-                lbnode.get("lineno", 0),
-                lbnode.get("summary", ""),
-                lbnode.get("source_snippet", ""),
+                os.path.basename(filepath),
+                filepath,
+                "file",
+                1,
+                file_node.get("summary", ""),
+                file_node.get("source", "")[:1000],
             )
 
 
@@ -193,7 +196,7 @@ def build_vector_index(
     batch_embeddings: list[list[float]] = []
     batch_metas: list[dict] = []
 
-    fallback_mode = not bool(_GEMINI_API_KEY)  # embed as text only when no key
+    fallback_mode = not bool(key_manager._KEYS)  # embed as text only when no key
 
     total_indexed = 0
 

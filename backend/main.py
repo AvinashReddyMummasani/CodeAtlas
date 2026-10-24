@@ -180,6 +180,19 @@ app.add_middleware(
 )
 
 # ------------------------------------------------------------------
+# No-cache middleware for SPA HTML and JS assets
+# ------------------------------------------------------------------
+@app.middleware("http")
+async def add_no_cache_headers(request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.startswith("/js") or path.startswith("/static"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+# ------------------------------------------------------------------
 # Static file serving — serve the frontend SPA
 # ------------------------------------------------------------------
 _FRONTEND_INDEX = _FRONTEND_DIR / "index.html"
@@ -189,7 +202,14 @@ _FRONTEND_INDEX = _FRONTEND_DIR / "index.html"
 async def serve_frontend() -> FileResponse:
     if not _FRONTEND_INDEX.exists():
         raise HTTPException(status_code=404, detail="Frontend index.html not found.")
-    return FileResponse(str(_FRONTEND_INDEX))
+    return FileResponse(
+        str(_FRONTEND_INDEX),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 # Optionally mount the rest of the frontend assets if the directory exists

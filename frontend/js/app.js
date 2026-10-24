@@ -246,7 +246,18 @@ function App() {
         {/* Tab Content Panes */}
         <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {tab === 'home' && (
-            <WelcomeHome onUpload={upload} uploading={uploading} progress={progress} />
+            <WelcomeHome
+              onUpload={upload}
+              uploading={uploading}
+              progress={progress}
+              sid={sid}
+              tree={tree}
+              onNavigate={setTab}
+              onOpenChat={() => {
+                const el = document.querySelector('input[placeholder*="Ask"]');
+                if (el) el.focus();
+              }}
+            />
           )}
           {tab === 'overview' && (
             <OverviewTab

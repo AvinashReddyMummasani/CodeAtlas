@@ -1,43 +1,149 @@
 // js/tabs.js — Main workspace tabs: Interactive Project Tree Studio, Detail, Flow, Report
 
 // ── Welcome / Home tab ────────────────────────────────────────────────────
-const WelcomeHome = ({ onUpload, uploading, progress }) => (
-  <div style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, gap: 30 }}>
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ width: 80, height: 80, borderRadius: 22, background: 'linear-gradient(135deg,#1f6feb 0%,#388bfd 50%,#bc8cff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, margin: '0 auto 16px', boxShadow: '0 8px 32px #1f6feb44' }}>🗺️</div>
-      <h1 style={{ fontSize: 32, fontWeight: 800, color: '#e6edf3', letterSpacing: '-.5px' }}>CodeAtlas</h1>
-      <p style={{ fontSize: 13.5, color: '#8b949e', marginTop: 6 }}>Interactive AI Code Intelligence, Hierarchical Project Tree &amp; Architecture Map</p>
-    </div>
+const WelcomeHome = ({ onUpload, uploading, progress, sid, tree, onNavigate, onOpenChat }) => {
+  const cards = [
+    {
+      e: '🌲',
+      t: 'Layered Overview',
+      subtitle: '5-Level Project Tree Explorer',
+      d: 'Explore Upper Logical, File, Class & Function levels with AI summaries & live drill-down',
+      c: '#58a6ff',
+      tab: 'overview'
+    },
+    {
+      e: '📊',
+      t: 'Project Report',
+      subtitle: 'Security & Architectural Audit',
+      d: 'Two-stage CVE vulnerability scan + severity-graded findings with Markdown export',
+      c: '#f0883e',
+      tab: 'report'
+    },
+    {
+      e: '⚡',
+      t: 'Optimality Check',
+      subtitle: 'Complexity & Refactoring',
+      d: 'Time & space complexity scoring with automated refactoring suggestions',
+      c: '#d29922',
+      tab: 'detail'
+    },
+    {
+      e: '💥',
+      t: 'Blast Radius Risk',
+      subtitle: 'Call-Graph Impact 0–10',
+      d: 'Measure ripple effects and affected dependencies if a function changes',
+      c: '#f85149',
+      tab: 'detail'
+    },
+    {
+      e: '🌊',
+      t: 'Execution Flow',
+      subtitle: 'Root-to-Function Paths',
+      d: 'Trace entry-point to function paths with step-by-step playback & animation',
+      c: '#bc8cff',
+      tab: 'flow'
+    },
+    {
+      e: '💬',
+      t: 'Explorer RAG Chat',
+      subtitle: 'Codebase Assistant',
+      d: 'Ask questions grounded in your code with direct source line citations',
+      c: '#3fb950',
+      tab: 'chat'
+    },
+  ];
 
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, maxWidth: 640, width: '100%' }}>
-      {[
-        { e: '🌲', t: 'Interactive Project Tree', d: 'Explore Upper Logical, File, Class &amp; Function levels with AI summaries', c: '#58a6ff' },
-        { e: '🌊', t: 'Flow Control on Tree', d: 'Step-by-step playback of execution paths with live tree node highlighting', c: '#bc8cff' },
-        { e: '💬', t: 'Ask AI on Tree', d: 'Contextual Q&amp;A directly attached to any node or the whole codebase', c: '#3fb950' },
-        { e: '⚡', t: 'Optimality Check', d: 'Time/space complexity ratings with automated refactoring suggestions', c: '#d29922' },
-        { e: '💥', t: 'Blast Radius Risk', d: 'Call-graph impact scoring 0–10 with dependency propagation analysis', c: '#f85149' },
-        { e: '📊', t: 'Project Report', d: 'Two-stage CVE vulnerability scan + severity-graded architectural findings', c: '#f0883e' },
-      ].map(({ e, t, d, c }) => (
-        <div key={t} style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 10, padding: 14, cursor: 'default', transition: 'border .15s' }}
-          onMouseEnter={ev => ev.currentTarget.style.borderColor = c + '88'}
-          onMouseLeave={ev => ev.currentTarget.style.borderColor = '#30363d'}>
-          <div style={{ fontSize: 24, marginBottom: 6 }}>{e}</div>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: c, marginBottom: 4 }}>{t}</div>
-          <div style={{ fontSize: 11, color: '#8b949e', lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: d }} />
+  return (
+    <div style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '36px 20px', gap: 24 }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 76, height: 76, borderRadius: 20, background: 'linear-gradient(135deg,#1f6feb 0%,#388bfd 50%,#bc8cff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38, margin: '0 auto 14px', boxShadow: '0 8px 32px #1f6feb44' }}>🗺️</div>
+        <h1 style={{ fontSize: 30, fontWeight: 800, color: '#e6edf3', letterSpacing: '-.5px' }}>CodeAtlas</h1>
+        <p style={{ fontSize: 13.5, color: '#8b949e', marginTop: 4 }}>AI-Powered Python Code Analysis, Hierarchical Tree &amp; Architecture Map</p>
+      </div>
+
+      {/* Prominent Active Project Banner if tree is already loaded */}
+      {tree && (
+        <div className="anim-fade" style={{ background: 'linear-gradient(135deg, #1f6feb22, #58a6ff11)', border: '1px solid #58a6ff55', borderRadius: 12, padding: '16px 22px', maxWidth: 660, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, boxShadow: '0 4px 20px #1f6feb15' }}>
+          <div>
+            <div style={{ fontSize: 11, color: '#58a6ff', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🚀 Project Loaded &amp; Ready</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#e6edf3', marginTop: 3 }}>
+              📦 {Object.keys(tree.files || {}).length} Python Files · {Object.keys(tree.all_functions || {}).length} Functions Analyzed
+            </div>
+            <div style={{ fontSize: 11.5, color: '#8b949e', marginTop: 2 }}>
+              Click below to view the entire 5-level hierarchical project tree structure.
+            </div>
+          </div>
+          <button
+            className="btn btn-solid-blue"
+            onClick={() => onNavigate && onNavigate('overview')}
+            style={{ padding: '8px 18px', fontSize: 13, flexShrink: 0, fontWeight: 700 }}
+          >
+            🌲 Open Project Tree →
+          </button>
         </div>
-      ))}
-    </div>
+      )}
 
-    <div style={{ maxWidth: 420, width: '100%' }}>
-      <DropZone onFile={onUpload} uploading={uploading} progress={progress} large />
-    </div>
+      {/* 6 Clickable Feature Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, maxWidth: 660, width: '100%' }}>
+        {cards.map(({ e, t, subtitle, d, c, tab }) => (
+          <div
+            key={t}
+            onClick={() => {
+              if (tab === 'chat') {
+                if (onOpenChat) onOpenChat();
+              } else if (onNavigate) {
+                onNavigate(tab);
+              }
+            }}
+            style={{
+              background: '#161b22',
+              border: '1px solid #30363d',
+              borderRadius: 12,
+              padding: 16,
+              cursor: 'pointer',
+              transition: 'all .18s ease',
+              textAlign: 'left',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+            onMouseEnter={ev => {
+              ev.currentTarget.style.borderColor = c + 'aa';
+              ev.currentTarget.style.transform = 'translateY(-2px)';
+              ev.currentTarget.style.background = '#1a2230';
+            }}
+            onMouseLeave={ev => {
+              ev.currentTarget.style.borderColor = '#30363d';
+              ev.currentTarget.style.transform = 'none';
+              ev.currentTarget.style.background = '#161b22';
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 24 }}>{e}</span>
+                <span style={{ fontSize: 10, color: c, background: c + '18', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
+                  CLICK TO VIEW ➔
+                </span>
+              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#e6edf3', marginBottom: 2 }}>{t}</div>
+              <div style={{ fontSize: 10.5, color: c, fontWeight: 600, marginBottom: 6 }}>{subtitle}</div>
+              <div style={{ fontSize: 11, color: '#8b949e', lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: d }} />
+            </div>
+          </div>
+        ))}
+      </div>
 
-    <div style={{ textAlign: 'center', fontSize: 11, color: '#484f58', lineHeight: 1.8 }}>
-      Strictly static AST analysis — your code is <strong style={{ color: '#e6edf3' }}>never executed or imported</strong><br />
-      <AIBadge />
+      <div style={{ maxWidth: 420, width: '100%' }}>
+        <DropZone onFile={onUpload} uploading={uploading} progress={progress} large />
+      </div>
+
+      <div style={{ textAlign: 'center', fontSize: 11, color: '#484f58', lineHeight: 1.8 }}>
+        Strictly static AST analysis — your code is <strong style={{ color: '#e6edf3' }}>never executed or imported</strong><br />
+        <AIBadge />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ── Interactive Tree Node Row Component for the Tree Explorer ─────────────
 const InteractiveTreeNode = ({
@@ -118,6 +224,10 @@ const InteractiveTreeNode = ({
         }}
         onClick={(e) => {
           e.stopPropagation();
+          // Clicking anywhere on the row toggles expansion AND selects node
+          if (hasChildren) {
+            onToggleOpen(node.id);
+          }
           onSelect(node);
         }}
       >
@@ -165,6 +275,13 @@ const InteractiveTreeNode = ({
         >
           {node.name}
         </span>
+
+        {/* Children count badge */}
+        {hasChildren && (
+          <span style={{ fontSize: 10, color: '#8b949e', background: '#21262d', padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>
+            {isOpen ? '▾' : '▸'} {node.children.length}
+          </span>
+        )}
 
         {/* Flow Step Badge */}
         {flowStepNumber !== undefined && (
@@ -469,14 +586,14 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: '#0d1117' }}>
       {/* ── Left / Center: Interactive Project Tree Explorer ──────────────── */}
-      <div style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', borderRight: '1px solid #30363d', minWidth: 360, overflow: 'hidden' }}>
+      <div style={{ flex: '1 1 52%', display: 'flex', flexDirection: 'column', borderRight: '1px solid #30363d', minWidth: 380, overflow: 'hidden' }}>
         
         {/* Top Tree Toolbar */}
         <div style={{ padding: '10px 14px', borderBottom: '1px solid #30363d', background: '#161b22', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 16 }}>🌲</span>
-              <span style={{ fontWeight: 700, fontSize: 13.5, color: '#e6edf3' }}>Project Hierarchy Tree</span>
+              <span style={{ fontWeight: 700, fontSize: 13.5, color: '#e6edf3' }}>Interactive Project Tree</span>
               <span style={{ fontSize: 11, color: '#8b949e', background: '#21262d', padding: '2px 8px', borderRadius: 99, border: '1px solid #30363d' }}>
                 5 Levels
               </span>
@@ -496,7 +613,7 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
                 style={{ padding: '3px 8px', fontSize: 11, background: '#21262d', color: '#c9d1d9', border: '1px solid #30363d' }}
                 onClick={expandAll}
               >
-                📂 Expand
+                📂 Expand All
               </button>
               <button
                 className="btn"
@@ -605,6 +722,14 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
                     >
                       ⏭
                     </button>
+                    <button
+                      className="btn btn-red"
+                      style={{ padding: '2px 7px', fontSize: 10, marginLeft: 4 }}
+                      onClick={() => setFlowMode(false)}
+                      title="Close flow"
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
               </div>
@@ -662,7 +787,7 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
       </div>
 
       {/* ── Right: Node Inspector, Ask AI, and Code Viewer ───────────────── */}
-      <div style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', minWidth: 380, overflow: 'hidden' }}>
+      <div style={{ flex: '1 1 48%', display: 'flex', flexDirection: 'column', minWidth: 380, overflow: 'hidden' }}>
         
         {/* Inspector Header */}
         <div style={{ padding: '10px 16px', borderBottom: '1px solid #30363d', background: '#161b22', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0 }}>
@@ -673,7 +798,7 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
                 {activeNode?.name || 'Select a Node'}
               </div>
               <div style={{ fontSize: 11, color: '#8b949e', marginTop: 1 }}>
-                {activeNode?.level} · {activeNode?.file ? bn(activeNode.file) : 'Project'}
+                {activeNode?.level} · {activeNode?.file ? bn(activeNode.file) : 'Project Root'}
                 {activeNode?.lineno ? ` :${activeNode.lineno}` : ''}
               </div>
             </div>
@@ -738,7 +863,7 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
                       style={{ padding: '4px 10px', fontSize: 11 }}
                       onClick={() => triggerFlow(activeNode.id)}
                     >
-                      🌊 Trace Root Flow
+                      🌊 Trace Execution Flow
                     </button>
                     {activeNode.callers?.length > 0 && (
                       <button

@@ -1,5 +1,7 @@
 // js/utils.js — Shared utilities, tree builder, and constants for CodeAtlas frontend
-const API = 'http://localhost:8000/api';
+const API = (typeof window !== 'undefined' && window.location?.origin)
+  ? `${window.location.origin}/api`
+  : 'http://localhost:8000/api';
 
 // Helper: join class names
 const cls = (...a) => a.filter(Boolean).join(' ');

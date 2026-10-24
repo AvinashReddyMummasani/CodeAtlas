@@ -1,37 +1,44 @@
-# CodeAtlas Production Dockerfile
+# CodeAtlas Production Dockerfile for Hugging Face Spaces & Cloud Containers
 FROM python:3.12-slim
 
 # Avoid writing .pyc files and enable unbuffered logging
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=8000
+    PORT=7860
 
 # Install build tools needed for native dependencies (e.g., bcrypt)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Hugging Face Spaces runs containers with UID 1000
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
 
-# Install Python dependencies first for caching
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+WORKDIR $HOME/app
+
+# Install Python dependencies first for efficient layer caching
+COPY --chown=user requirements.txt $HOME/app/
+RUN pip install --no-cache-dir --user --upgrade pip && \
+    pip install --no-cache-dir --user -r requirements.txt
 
 # Copy application source code
-COPY backend/ /app/backend/
-COPY frontend/ /app/frontend/
-COPY README.md /app/
+COPY --chown=user backend/ $HOME/app/backend/
+COPY --chown=user frontend/ $HOME/app/frontend/
+COPY --chown=user README.md $HOME/app/
 
 # Create persistent storage directories
-RUN mkdir -p /app/sessions /app/chroma_store
+RUN mkdir -p $HOME/app/sessions $HOME/app/chroma_store
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:${PORT}/api/health || exit 1
 
-EXPOSE 8000
+EXPOSE 7860
 
 # Run FastAPI via Uvicorn
-CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "python -m uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-7860}"]

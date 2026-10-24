@@ -37,28 +37,52 @@ _DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def _create_db_engine() -> Engine:
     """Initialize SQLAlchemy engine for either Cloud Postgres or SQLite."""
-    url = _DATABASE_URL
-    if not url or not url.strip():
+    url = os.environ.get("DATABASE_URL", "").strip()
+    if not url:
         # Fall back to SQLite
         db_file = Path(os.environ.get("CODEATLAS_DB_PATH", Path(__file__).resolve().parent.parent / "codeatlas.db"))
         sqlite_url = f"sqlite:///{db_file}"
         logger.info("Using local SQLite database: %s", db_file)
         return create_engine(sqlite_url, connect_args={"check_same_thread": False})
 
-    url = url.strip()
-    # Normalize postgres URL to use pure-python pg8000 driver if available
+    # Standardize postgres:// to postgresql://
     if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql+pg8000://", 1)
-    elif url.startswith("postgresql://") and "+pg8000" not in url and "+psycopg2" not in url:
-        try:
-            import pg8000
-            url = url.replace("postgresql://", "postgresql+pg8000://", 1)
-        except ImportError:
-            pass
+        url = url.replace("postgres://", "postgresql://", 1)
 
-    # Strip sslmode if pg8000 handles ssl differently
+    connect_args: dict[str, Any] = {}
+
+    # Prefer psycopg2 if available (handles sslmode natively)
+    has_psycopg2 = False
+    try:
+        import psycopg2  # noqa: F401
+        has_psycopg2 = True
+    except ImportError:
+        pass
+
+    if has_psycopg2:
+        if url.startswith("postgresql://") and "+psycopg2" not in url:
+            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    else:
+        # Pure-python pg8000 fallback: safely remove sslmode from query string and supply ssl_context
+        import ssl
+        import urllib.parse
+        parsed = urllib.parse.urlsplit(url)
+        query_params = urllib.parse.parse_qs(parsed.query)
+        query_params.pop("sslmode", None)
+        query_params.pop("channel_binding", None)
+        new_query = urllib.parse.urlencode(query_params, doseq=True)
+
+        url = urllib.parse.urlunsplit((
+            "postgresql+pg8000",
+            parsed.netloc,
+            parsed.path,
+            new_query,
+            parsed.fragment
+        ))
+        connect_args["ssl_context"] = ssl.create_default_context()
+
     logger.info("Connecting to Cloud Database: %s", url.split("@")[-1] if "@" in url else "configured URL")
-    return create_engine(url, pool_pre_ping=True)
+    return create_engine(url, pool_pre_ping=True, connect_args=connect_args)
 
 
 engine: Engine = _create_db_engine()

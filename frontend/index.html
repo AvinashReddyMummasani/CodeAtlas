@@ -80,6 +80,38 @@
     .anim-slide { animation: slideIn 0.2s ease both; }
     .anim-glow  { animation: glow 2s ease-in-out infinite; }
 
+    @keyframes flowDash { to { stroke-dashoffset: -24; } }
+    .anim-flow-dash { animation: flowDash 1s linear infinite; }
+
+    .graph-canvas-bg {
+      background-color: #0d1117;
+      background-image: radial-gradient(#21262d 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+    }
+    .graph-node-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px #00000066;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .graph-node-card:hover {
+      border-color: #58a6ff88;
+      background: #1c2433;
+    }
+    .graph-node-card.selected {
+      border-color: #58a6ff !important;
+      box-shadow: 0 0 20px #58a6ff66 !important;
+      background: #1d2d44 !important;
+    }
+    .graph-node-card.flow-active {
+      border-color: #388bfd !important;
+      box-shadow: 0 0 24px #388bfd88 !important;
+      animation: glow 1.6s ease-in-out infinite;
+    }
+
     /* Skeleton loader */
     .skeleton {
       background: linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%);

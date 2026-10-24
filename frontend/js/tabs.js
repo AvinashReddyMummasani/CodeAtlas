@@ -1,13 +1,13 @@
-// js/tabs.js — Main workspace tabs: Interactive Project Tree Studio, Detail, Flow, Report
+// js/tabs.js — Main workspace tabs: Interactive Graph Tree Studio, Detail, Flow, Report
 
 // ── Welcome / Home tab ────────────────────────────────────────────────────
 const WelcomeHome = ({ onUpload, uploading, progress, sid, tree, onNavigate, onOpenChat }) => {
   const cards = [
     {
-      e: '🌲',
-      t: 'Layered Overview',
-      subtitle: '5-Level Project Tree Explorer',
-      d: 'Explore Upper Logical, File, Class & Function levels with AI summaries & live drill-down',
+      e: '🗺️',
+      t: 'Graph Tree Explorer',
+      subtitle: 'Visual Architecture Map',
+      d: 'Interactive 2D graph tree with pan & zoom, collapsible branches, and 5 granularity levels',
       c: '#58a6ff',
       tab: 'overview'
     },
@@ -39,7 +39,7 @@ const WelcomeHome = ({ onUpload, uploading, progress, sid, tree, onNavigate, onO
       e: '🌊',
       t: 'Execution Flow',
       subtitle: 'Root-to-Function Paths',
-      d: 'Trace entry-point to function paths with step-by-step playback & animation',
+      d: 'Step-by-step playback of execution paths with live graph tree node highlighting',
       c: '#bc8cff',
       tab: 'flow'
     },
@@ -58,7 +58,7 @@ const WelcomeHome = ({ onUpload, uploading, progress, sid, tree, onNavigate, onO
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: 76, height: 76, borderRadius: 20, background: 'linear-gradient(135deg,#1f6feb 0%,#388bfd 50%,#bc8cff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38, margin: '0 auto 14px', boxShadow: '0 8px 32px #1f6feb44' }}>🗺️</div>
         <h1 style={{ fontSize: 30, fontWeight: 800, color: '#e6edf3', letterSpacing: '-.5px' }}>CodeAtlas</h1>
-        <p style={{ fontSize: 13.5, color: '#8b949e', marginTop: 4 }}>AI-Powered Python Code Analysis, Hierarchical Tree &amp; Architecture Map</p>
+        <p style={{ fontSize: 13.5, color: '#8b949e', marginTop: 4 }}>AI-Powered Python Code Analysis, Interactive Graph Tree &amp; Architecture Map</p>
       </div>
 
       {/* Prominent Active Project Banner if tree is already loaded */}
@@ -70,7 +70,7 @@ const WelcomeHome = ({ onUpload, uploading, progress, sid, tree, onNavigate, onO
               📦 {Object.keys(tree.files || {}).length} Python Files · {Object.keys(tree.all_functions || {}).length} Functions Analyzed
             </div>
             <div style={{ fontSize: 11.5, color: '#8b949e', marginTop: 2 }}>
-              Click below to view the entire 5-level hierarchical project tree structure.
+              Explore the visual 2D Graph Tree with pan &amp; zoom, step through execution flows, or run AI audits.
             </div>
           </div>
           <button
@@ -78,7 +78,7 @@ const WelcomeHome = ({ onUpload, uploading, progress, sid, tree, onNavigate, onO
             onClick={() => onNavigate && onNavigate('overview')}
             style={{ padding: '8px 18px', fontSize: 13, flexShrink: 0, fontWeight: 700 }}
           >
-            🌲 Open Project Tree →
+            🗺️ Open Graph Tree →
           </button>
         </div>
       )}
@@ -122,7 +122,7 @@ const WelcomeHome = ({ onUpload, uploading, progress, sid, tree, onNavigate, onO
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 24 }}>{e}</span>
                 <span style={{ fontSize: 10, color: c, background: c + '18', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>
-                  CLICK TO VIEW ➔
+                  OPEN ➔
                 </span>
               </div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: '#e6edf3', marginBottom: 2 }}>{t}</div>
@@ -145,7 +145,440 @@ const WelcomeHome = ({ onUpload, uploading, progress, sid, tree, onNavigate, onO
   );
 };
 
-// ── Interactive Tree Node Row Component for the Tree Explorer ─────────────
+// ── Graph Tree Layout Engine (Walker / Reingold-Tilford Horizontal Tree) ──
+function layoutGraphTree(rootNode, openMap, levelFilter = 'ALL', searchQuery = '') {
+  if (!rootNode) return { nodes: [], links: [], totalWidth: 800, totalHeight: 600 };
+
+  const nodeWidth = 260;
+  const nodeHeight = 80;
+  const gapX = 85;
+  const gapY = 24;
+
+  let currentY = 40;
+  const nodes = [];
+  const links = [];
+
+  function postOrder(node, depth = 0) {
+    const hasChildren = node.children && node.children.length > 0;
+    // Default open: Project, Files, and Classes open; Functions closed unless toggled
+    const defaultOpen = depth < 3;
+    const isOpen = openMap[node.id] !== undefined ? openMap[node.id] : defaultOpen;
+
+    let validChildren = node.children || [];
+    if (levelFilter !== 'ALL') {
+      validChildren = validChildren.filter(c => {
+        if (c.level === levelFilter) return true;
+        const flat = flattenTree([c]);
+        return flat.some(f => f.level === levelFilter);
+      });
+    }
+
+    const childrenToRender = (isOpen && hasChildren) ? validChildren : [];
+    const laidChildren = [];
+
+    for (const child of childrenToRender) {
+      laidChildren.push(postOrder(child, depth + 1));
+    }
+
+    let y;
+    if (laidChildren.length === 0) {
+      y = currentY;
+      currentY += nodeHeight + gapY;
+    } else {
+      y = (laidChildren[0].y + laidChildren[laidChildren.length - 1].y) / 2;
+    }
+
+    const x = 50 + depth * (nodeWidth + gapX);
+    const result = {
+      ...node,
+      x,
+      y,
+      depth,
+      hasChildren,
+      isOpen,
+      childrenCount: node.children ? node.children.length : 0
+    };
+
+    nodes.push(result);
+
+    for (const child of laidChildren) {
+      links.push({
+        source: { x: x + nodeWidth, y: y + nodeHeight / 2 },
+        target: { x: child.x, y: child.y + nodeHeight / 2 },
+        sourceId: node.id,
+        targetId: child.id
+      });
+    }
+
+    return result;
+  }
+
+  postOrder(rootNode, 0);
+
+  const maxDepth = nodes.reduce((m, n) => Math.max(m, n.depth), 0);
+  const totalWidth = 50 + (maxDepth + 1) * (nodeWidth + gapX) + 200;
+  const totalHeight = Math.max(currentY + 60, 600);
+
+  return { nodes, links, totalWidth, totalHeight };
+}
+
+// ── Visual Graph Node Card Component (Floating in the 2D Canvas) ──────────
+const GraphNodeCard = ({
+  node,
+  isSelected,
+  onSelect,
+  onToggleOpen,
+  flowStepNumber,
+  isFlowActive,
+  onTraceFlow,
+  searchQuery,
+}) => {
+  const cfg = LEVELS[node.level] || LEVELS.FUNCTION;
+  const matchesSearch = searchQuery
+    ? (node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       (node.summary && node.summary.toLowerCase().includes(searchQuery.toLowerCase())))
+    : true;
+
+  // Derive location, module, or count subtitle
+  let locationInfo = '';
+  if (node.level === 'PROJECT') {
+    locationInfo = `Root Module · ${node.stats?.files || 0} files · ${node.stats?.functions || 0} fns`;
+  } else if (node.level === 'FILE') {
+    const dir = node.file ? node.file.replace(/\\/g, '/').split('/').slice(0, -1).join('/') : '';
+    locationInfo = `${dir ? dir + '/' : ''}${bn(node.file)}`;
+  } else if (node.level === 'BLOCK') {
+    locationInfo = `${bn(node.file)}${node.lineno ? ` :L${node.lineno}` : ''}`;
+  } else if (node.level === 'FUNCTION') {
+    const cctx = node.class_ctx ? `${node.class_ctx}.` : '';
+    const callers = node.callers?.length || 0;
+    const callees = node.callees?.length || 0;
+    locationInfo = `${cctx}${bn(node.file)}${node.lineno ? ` :L${node.lineno}` : ''} · ${callers} in / ${callees} out`;
+  } else if (node.level === 'LOGICAL_BLOCK') {
+    locationInfo = `L${node.lineno}–L${node.endLineno || node.lineno} · inside function`;
+  }
+
+  return (
+    <div
+      className={cls(
+        'graph-node-card',
+        isSelected && 'selected',
+        isFlowActive && 'flow-active'
+      )}
+      style={{
+        position: 'absolute',
+        left: `${node.x}px`,
+        top: `${node.y}px`,
+        width: '260px',
+        height: '80px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '9px 12px',
+        opacity: searchQuery && !matchesSearch ? 0.35 : 1,
+        borderLeft: `4px solid ${cfg.color}`,
+        zIndex: isSelected ? 20 : isFlowActive ? 15 : 5,
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(node);
+      }}
+    >
+      {/* Top Header Row: Level Badge & Indicators */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 13 }}>{cfg.icon}</span>
+          <span
+            style={{
+              fontSize: 9.5,
+              fontWeight: 700,
+              color: cfg.color,
+              background: `${cfg.color}18`,
+              padding: '1px 5px',
+              borderRadius: 4,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {cfg.label}
+          </span>
+          {node.entry_point && (
+            <span style={{ fontSize: 9, fontWeight: 700, background: '#3fb95022', color: '#3fb950', border: '1px solid #3fb95044', borderRadius: 3, padding: '0 4px' }}>
+              ENTRY
+            </span>
+          )}
+        </div>
+
+        {/* Right side: Flow Badge or Expand/Collapse Toggle Pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {flowStepNumber !== undefined && (
+            <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: isFlowActive ? '#1f6feb' : '#21262d', color: isFlowActive ? '#fff' : '#58a6ff', border: `1px solid ${isFlowActive ? '#58a6ff' : '#30363d'}` }}>
+              {flowStepNumber === 0 ? '🟢 ENTRY' : `STEP ${flowStepNumber + 1}`}
+            </span>
+          )}
+
+          {node.hasChildren && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleOpen(node.id);
+              }}
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                background: node.isOpen ? '#21262d' : '#1f6feb33',
+                color: node.isOpen ? '#8b949e' : '#58a6ff',
+                border: `1px solid ${node.isOpen ? '#30363d' : '#58a6ff66'}`,
+                borderRadius: 99,
+                padding: '1px 7px',
+                cursor: 'pointer',
+              }}
+              title={node.isOpen ? 'Click to collapse branch' : 'Click to expand branch'}
+            >
+              {node.isOpen ? `▾ ${node.childrenCount}` : `+ ${node.childrenCount}`}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Middle: Title */}
+      <div
+        style={{
+          fontFamily: node.level === 'FUNCTION' || node.level === 'BLOCK' ? 'monospace' : 'inherit',
+          fontSize: 12.5,
+          fontWeight: 700,
+          color: isSelected ? '#58a6ff' : '#e6edf3',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+        title={node.name}
+      >
+        {node.name}
+      </div>
+
+      {/* Bottom Row: Location & Quick Action */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 10, color: '#8b949e' }}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '175px' }} title={locationInfo}>
+          {locationInfo}
+        </span>
+
+        {node.level === 'FUNCTION' && onTraceFlow && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onTraceFlow(node.id);
+            }}
+            style={{
+              fontSize: 9.5,
+              padding: '1px 5px',
+              borderRadius: 3,
+              background: '#bc8cff15',
+              border: '1px solid #bc8cff44',
+              color: '#bc8cff',
+              cursor: 'pointer',
+            }}
+            title="Trace execution flow from entry point"
+          >
+            🌊 Trace
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── 2D Graph Tree Canvas with Pan, Zoom & Bezier Curve Connectors ──────────
+const GraphTreeView = ({
+  rootNode,
+  openMap,
+  onToggleOpen,
+  selNode,
+  onSelectNode,
+  levelFilter,
+  searchQuery,
+  flowActiveStep,
+  flowStepMap,
+  flowData,
+  onTraceFlow,
+}) => {
+  const containerRef = React.useRef(null);
+  const [zoom, setZoom] = React.useState(0.85);
+  const [pan, setPan] = React.useState({ x: 40, y: 30 });
+  const [isDragging, setIsDragging] = React.useState(false);
+  const dragStartRef = React.useRef({ x: 0, y: 0 });
+
+  // Calculate layout
+  const { nodes, links, totalWidth, totalHeight } = React.useMemo(() => {
+    return layoutGraphTree(rootNode, openMap, levelFilter, searchQuery);
+  }, [rootNode, openMap, levelFilter, searchQuery]);
+
+  // Set of node IDs in active flow path
+  const flowPathIds = React.useMemo(() => {
+    if (!flowData?.paths?.[0]?.steps) return new Set();
+    return new Set(flowData.paths[0].steps.map(s => s.func_id));
+  }, [flowData]);
+
+  // Mouse pan handlers
+  const handleMouseDown = (e) => {
+    // Only pan if clicked on background canvas
+    if (e.target.closest('.graph-node-card') || e.target.closest('.zoom-controls')) return;
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setPan({
+      x: e.clientX - dragStartRef.current.x,
+      y: e.clientY - dragStartRef.current.y
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Mouse wheel zoom handler
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.08 : 0.92;
+    setZoom(prev => Math.min(Math.max(prev * factor, 0.25), 2.2));
+  };
+
+  // Zoom control buttons
+  const zoomIn = () => setZoom(z => Math.min(z + 0.15, 2.2));
+  const zoomOut = () => setZoom(z => Math.max(z - 0.15, 0.25));
+  const resetZoom = () => {
+    setZoom(0.85);
+    setPan({ x: 40, y: 30 });
+  };
+  const fitToScreen = () => {
+    if (!containerRef.current) return;
+    const w = containerRef.current.clientWidth || 800;
+    const h = containerRef.current.clientHeight || 600;
+    const scaleX = (w - 80) / totalWidth;
+    const scaleY = (h - 80) / totalHeight;
+    const fitScale = Math.min(scaleX, scaleY, 1.0);
+    setZoom(Math.max(fitScale, 0.3));
+    setPan({ x: 30, y: 20 });
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="graph-canvas-bg"
+      style={{
+        flex: 1,
+        height: '100%',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        userSelect: 'none',
+      }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onWheel={handleWheel}
+    >
+      {/* Zoom & Pan Floating Controls Toolbar */}
+      <div
+        className="zoom-controls"
+        style={{
+          position: 'absolute',
+          bottom: 16,
+          right: 16,
+          zIndex: 40,
+          background: '#161b22e6',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid #30363d',
+          borderRadius: 8,
+          padding: '4px 8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          boxShadow: '0 4px 20px #00000088',
+        }}
+      >
+        <button className="btn" style={{ padding: '3px 8px', fontSize: 12, background: '#21262d', color: '#c9d1d9' }} onClick={zoomIn} title="Zoom In">
+          ➕
+        </button>
+        <span style={{ fontSize: 11, color: '#8b949e', fontFamily: 'monospace', minWidth: 42, textAlign: 'center' }}>
+          {Math.round(zoom * 100)}%
+        </span>
+        <button className="btn" style={{ padding: '3px 8px', fontSize: 12, background: '#21262d', color: '#c9d1d9' }} onClick={zoomOut} title="Zoom Out">
+          ➖
+        </button>
+        <button className="btn" style={{ padding: '3px 8px', fontSize: 11, background: '#21262d', color: '#c9d1d9' }} onClick={fitToScreen} title="Fit to Screen">
+          📐 Fit
+        </button>
+        <button className="btn" style={{ padding: '3px 8px', fontSize: 11, background: '#21262d', color: '#c9d1d9' }} onClick={resetZoom} title="Reset View">
+          🎯 Center
+        </button>
+      </div>
+
+      {/* Scalable & Pannable World Group */}
+      <div
+        style={{
+          position: 'absolute',
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: '0 0',
+          width: `${totalWidth}px`,
+          height: `${totalHeight}px`,
+        }}
+      >
+        {/* SVG Bezier Connectors Layer */}
+        <svg
+          width={totalWidth}
+          height={totalHeight}
+          style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}
+        >
+          {links.map((link, idx) => {
+            const midX = (link.source.x + link.target.x) / 2;
+            const d = `M ${link.source.x} ${link.source.y} C ${midX} ${link.source.y}, ${midX} ${link.target.y}, ${link.target.x} ${link.target.y}`;
+            const isFlowEdge = flowPathIds.has(link.sourceId) && flowPathIds.has(link.targetId);
+
+            return (
+              <path
+                key={idx}
+                d={d}
+                fill="none"
+                stroke={isFlowEdge ? '#388bfd' : '#30363d'}
+                strokeWidth={isFlowEdge ? '3.5' : '1.8'}
+                strokeOpacity={isFlowEdge ? '1' : '0.75'}
+                strokeDasharray={isFlowEdge ? '8 4' : 'none'}
+                className={isFlowEdge ? 'anim-flow-dash' : undefined}
+                filter={isFlowEdge ? 'drop-shadow(0 0 6px #388bfd)' : undefined}
+              />
+            );
+          })}
+        </svg>
+
+        {/* HTML Node Cards Layer */}
+        {nodes.map(n => {
+          const flowStepNumber = flowStepMap ? flowStepMap[n.id] : undefined;
+          const isFlowActive = flowActiveStep !== null && flowStepNumber === flowActiveStep;
+
+          return (
+            <GraphNodeCard
+              key={n.id}
+              node={n}
+              isSelected={selNode?.id === n.id}
+              onSelect={onSelectNode}
+              onToggleOpen={onToggleOpen}
+              flowStepNumber={flowStepNumber}
+              isFlowActive={isFlowActive}
+              onTraceFlow={onTraceFlow}
+              searchQuery={searchQuery}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ── Interactive Outline Tree Node Row (For List Outline Mode) ─────────────
 const InteractiveTreeNode = ({
   node,
   depth = 0,
@@ -166,12 +599,10 @@ const InteractiveTreeNode = ({
   const isSelected = selNode?.id === node.id;
   const cfg = LEVELS[node.level] || LEVELS.FUNCTION;
 
-  // Filter visibility by level
   if (levelFilter !== 'ALL' && node.level !== 'PROJECT' && node.level !== levelFilter) {
     if (!hasChildren) return null;
   }
 
-  // Filter visibility by search query
   const matchesSearch = searchQuery
     ? (node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
        (node.summary && node.summary.toLowerCase().includes(searchQuery.toLowerCase())))
@@ -224,14 +655,12 @@ const InteractiveTreeNode = ({
         }}
         onClick={(e) => {
           e.stopPropagation();
-          // Clicking anywhere on the row toggles expansion AND selects node
           if (hasChildren) {
             onToggleOpen(node.id);
           }
           onSelect(node);
         }}
       >
-        {/* Expand / Collapse toggle icon */}
         <span
           style={{
             width: 16,
@@ -256,10 +685,8 @@ const InteractiveTreeNode = ({
           {hasChildren ? (isOpen ? '▼' : '▶') : '•'}
         </span>
 
-        {/* Level Icon */}
         <span style={{ fontSize: 14, flexShrink: 0 }}>{cfg.icon}</span>
 
-        {/* Node Name */}
         <span
           style={{
             fontFamily: node.level === 'FUNCTION' || node.level === 'BLOCK' ? 'monospace' : 'inherit',
@@ -276,14 +703,12 @@ const InteractiveTreeNode = ({
           {node.name}
         </span>
 
-        {/* Children count badge */}
         {hasChildren && (
           <span style={{ fontSize: 10, color: '#8b949e', background: '#21262d', padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>
             {isOpen ? '▾' : '▸'} {node.children.length}
           </span>
         )}
 
-        {/* Flow Step Badge */}
         {flowStepNumber !== undefined && (
           <span
             style={{
@@ -294,51 +719,28 @@ const InteractiveTreeNode = ({
               background: isFlowActive ? '#1f6feb' : '#21262d',
               border: `1px solid ${isFlowActive ? '#58a6ff' : '#30363d'}`,
               color: isFlowActive ? '#fff' : '#58a6ff',
-              boxShadow: isFlowActive ? '0 0 10px #58a6ff66' : 'none',
             }}
           >
             {flowStepNumber === 0 ? '🟢 ENTRY' : `STEP ${flowStepNumber + 1}`}
           </span>
         )}
 
-        {/* Entry Point Badge */}
         {node.entry_point && (
-          <span
-            style={{
-              fontSize: 9.5,
-              fontWeight: 700,
-              padding: '1px 6px',
-              borderRadius: 4,
-              background: '#3fb95022',
-              color: '#3fb950',
-              border: '1px solid #3fb95044',
-            }}
-          >
+          <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: '#3fb95022', color: '#3fb950', border: '1px solid #3fb95044' }}>
             ENTRY
           </span>
         )}
 
-        {/* Line Numbers */}
         {node.lineno ? (
           <span style={{ fontSize: 10.5, color: '#484f58', fontFamily: 'monospace', flexShrink: 0 }}>
             L{node.lineno}
           </span>
         ) : null}
 
-        {/* Quick Trace Flow Button for Functions */}
         {node.level === 'FUNCTION' && onTraceFlow && (
           <button
             title="Trace Root Execution Flow to this function"
-            style={{
-              fontSize: 10,
-              padding: '2px 6px',
-              borderRadius: 4,
-              background: '#bc8cff15',
-              border: '1px solid #bc8cff33',
-              color: '#bc8cff',
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
+            style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#bc8cff15', border: '1px solid #bc8cff33', color: '#bc8cff', cursor: 'pointer', flexShrink: 0 }}
             onClick={(e) => {
               e.stopPropagation();
               onTraceFlow(node.id);
@@ -349,7 +751,6 @@ const InteractiveTreeNode = ({
         )}
       </div>
 
-      {/* Children */}
       {hasChildren && isOpen && (
         <div style={{ borderLeft: '1px solid #21262d', marginLeft: `${16 + depth * 18}px` }}>
           {node.children.map(c => (
@@ -376,15 +777,18 @@ const InteractiveTreeNode = ({
   );
 };
 
-// ── Interactive Project Tree Explorer (The Centerpiece of CodeAtlas) ──────
+// ── Interactive Project Tree & Graph Studio (Centerpiece of CodeAtlas) ────
 const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => {
   if (!tree) return <WelcomeHint />;
+
+  // View Mode: 'graph' (2D Canvas with Pan & Zoom) | 'outline' (Collapsible List)
+  const [viewMode, setViewMode] = React.useState('graph');
 
   // State for Tree Explorer
   const [openMap, setOpenMap] = React.useState({ PROJECT_ROOT: true });
   const [levelFilter, setLevelFilter] = React.useState('ALL');
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [inspectorTab, setInspectorTab] = React.useState('details'); // 'details' | 'ask_ai' | 'quick_metrics'
+  const [inspectorTab, setInspectorTab] = React.useState('details');
 
   // Flow Control State integrated directly into the Tree
   const [flowMode, setFlowMode] = React.useState(false);
@@ -471,7 +875,6 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
       } else {
         setFlowData(data);
         if (data.paths?.[0]?.steps?.length > 0) {
-          // Auto-select first step (Entry point)
           const firstStep = data.paths[0].steps[0];
           const found = findNodeInTree(projectTree, firstStep.func_id);
           if (found) onSelectNode(found);
@@ -482,7 +885,6 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
     }
   };
 
-  // Flow player step navigation
   const goToFlowStep = (idx) => {
     if (!flowData?.paths?.[0]?.steps) return;
     const steps = flowData.paths[0].steps;
@@ -493,7 +895,6 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
     if (found) onSelectNode(found);
   };
 
-  // Flow player auto-play toggle
   const togglePlayFlow = () => {
     setIsPlayingFlow(p => !p);
   };
@@ -585,15 +986,47 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
 
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: '#0d1117' }}>
-      {/* ── Left / Center: Interactive Project Tree Explorer ──────────────── */}
-      <div style={{ flex: '1 1 52%', display: 'flex', flexDirection: 'column', borderRight: '1px solid #30363d', minWidth: 380, overflow: 'hidden' }}>
+      {/* ── Left / Center Stage: Visual Graph Tree or Outline Tree ────────── */}
+      <div style={{ flex: '1 1 54%', display: 'flex', flexDirection: 'column', borderRight: '1px solid #30363d', minWidth: 400, overflow: 'hidden' }}>
         
         {/* Top Tree Toolbar */}
         <div style={{ padding: '10px 14px', borderBottom: '1px solid #30363d', background: '#161b22', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 16 }}>🌲</span>
-              <span style={{ fontWeight: 700, fontSize: 13.5, color: '#e6edf3' }}>Interactive Project Tree</span>
+            {/* View Mode Toggle: Graph Tree Canvas vs Outline Tree */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', background: '#0d1117', padding: 2, borderRadius: 6, border: '1px solid #30363d' }}>
+                <button
+                  onClick={() => setViewMode('graph')}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: 5,
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: viewMode === 'graph' ? '#1f6feb' : 'transparent',
+                    color: viewMode === 'graph' ? '#fff' : '#8b949e',
+                    border: 'none',
+                  }}
+                >
+                  🗺️ Graph Tree Canvas
+                </button>
+                <button
+                  onClick={() => setViewMode('outline')}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: 5,
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: viewMode === 'outline' ? '#1f6feb' : 'transparent',
+                    color: viewMode === 'outline' ? '#fff' : '#8b949e',
+                    border: 'none',
+                  }}
+                >
+                  📑 Outline Tree
+                </button>
+              </div>
+
               <span style={{ fontSize: 11, color: '#8b949e', background: '#21262d', padding: '2px 8px', borderRadius: 99, border: '1px solid #30363d' }}>
                 5 Levels
               </span>
@@ -631,7 +1064,7 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
               <input
                 className="inp"
                 style={{ fontSize: 11.5, padding: '5px 8px 5px 24px' }}
-                placeholder="Filter tree nodes…"
+                placeholder="Search graph nodes by name or summary…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
@@ -763,31 +1196,47 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
           )}
         </div>
 
-        {/* Tree Scroll View */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 6px', background: '#0d1117' }}>
-          {projectTree.map(rootNode => (
-            <InteractiveTreeNode
-              key={rootNode.id}
-              node={rootNode}
-              depth={0}
-              selNode={activeNode}
-              onSelect={onSelectNode}
-              openMap={openMap}
-              onToggleOpen={toggleOpen}
-              levelFilter={levelFilter}
-              searchQuery={searchQuery}
-              flowActiveStep={flowMode ? flowActiveStep : null}
-              flowStepMap={flowMode ? flowStepMap : {}}
-              callerHighlightIds={callerHighlightIds}
-              calleeHighlightIds={calleeHighlightIds}
-              onTraceFlow={triggerFlow}
-            />
-          ))}
-        </div>
+        {/* Visual Graph Tree Canvas vs Outline Tree */}
+        {viewMode === 'graph' ? (
+          <GraphTreeView
+            rootNode={rootNode}
+            openMap={openMap}
+            onToggleOpen={toggleOpen}
+            selNode={activeNode}
+            onSelectNode={onSelectNode}
+            levelFilter={levelFilter}
+            searchQuery={searchQuery}
+            flowActiveStep={flowMode ? flowActiveStep : null}
+            flowStepMap={flowMode ? flowStepMap : {}}
+            flowData={flowData}
+            onTraceFlow={triggerFlow}
+          />
+        ) : (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 6px', background: '#0d1117' }}>
+            {projectTree.map(rootNode => (
+              <InteractiveTreeNode
+                key={rootNode.id}
+                node={rootNode}
+                depth={0}
+                selNode={activeNode}
+                onSelect={onSelectNode}
+                openMap={openMap}
+                onToggleOpen={toggleOpen}
+                levelFilter={levelFilter}
+                searchQuery={searchQuery}
+                flowActiveStep={flowMode ? flowActiveStep : null}
+                flowStepMap={flowMode ? flowStepMap : {}}
+                callerHighlightIds={callerHighlightIds}
+                calleeHighlightIds={calleeHighlightIds}
+                onTraceFlow={triggerFlow}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ── Right: Node Inspector, Ask AI, and Code Viewer ───────────────── */}
-      <div style={{ flex: '1 1 48%', display: 'flex', flexDirection: 'column', minWidth: 380, overflow: 'hidden' }}>
+      {/* ── Right Stage: Node Inspector, Ask AI, and Code Viewer ─────────── */}
+      <div style={{ flex: '1 1 46%', display: 'flex', flexDirection: 'column', minWidth: 380, overflow: 'hidden' }}>
         
         {/* Inspector Header */}
         <div style={{ padding: '10px 16px', borderBottom: '1px solid #30363d', background: '#161b22', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexShrink: 0 }}>
@@ -951,8 +1400,8 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
                 {treeChatMsgs.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 20px', color: '#484f58', fontSize: 12.5 }}>
                     <div style={{ fontSize: 32, marginBottom: 8 }}>💬</div>
-                    <div>Ask any question about <strong style={{ color: '#e6edf3' }}>{activeNode?.name || 'this tree'}</strong>.</div>
-                    <div style={{ marginTop: 4, color: '#8b949e' }}>Click a quick prompt above or type a custom question below.</div>
+                    <div>Ask any question about <strong style={{ color: '#e6edf3' }}>{activeNode?.name || 'this tree node'}</strong>.</div>
+                    <div style={{ marginTop: 4, color: '#8b949e' }}>Click a prompt above or type a custom question below.</div>
                   </div>
                 ) : (
                   treeChatMsgs.map((m, idx) => (
@@ -964,7 +1413,6 @@ const OverviewTab = ({ tree, node, sid, onSelectNode, toast, onJumpToFlow }) => 
                         {m.role === 'ai' && <div style={{ marginBottom: 4 }}><AIBadge /></div>}
                         <div style={{ whiteSpace: 'pre-wrap' }}>{m.content}</div>
 
-                        {/* Citation jump buttons */}
                         {(m.cited || []).length > 0 && (
                           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                             {m.cited.map((cf, j) => (
@@ -1039,7 +1487,7 @@ const WelcomeHint = () => (
     <div style={{ fontSize: 56 }}>🗺️</div>
     <div>
       <div style={{ fontWeight: 700, fontSize: 22, color: '#e6edf3', marginBottom: 6 }}>Welcome to CodeAtlas</div>
-      <div style={{ fontSize: 13, color: '#8b949e', lineHeight: 1.7 }}>Upload a Python .zip project to explore the interactive 5-level hierarchical tree.</div>
+      <div style={{ fontSize: 13, color: '#8b949e', lineHeight: 1.7 }}>Upload a Python .zip project to explore the interactive visual Graph Tree.</div>
     </div>
   </div>
 );

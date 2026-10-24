@@ -95,7 +95,7 @@
       padding-left: 6px !important;
     }
 
-    /* Sidebar tree item */
+    /* Sidebar and Interactive tree items */
     .tree-item {
       transition: background 0.12s, color 0.12s;
       border-radius: 5px;
@@ -103,6 +103,22 @@
     }
     .tree-item:hover { background: #1f2937; }
     .tree-item.selected { background: #1d3557; color: #58a6ff; }
+
+    .tree-node-row {
+      transition: background 0.15s ease, border-color 0.15s ease;
+      user-select: none;
+    }
+    .tree-node-row:hover {
+      background: #161b22 !important;
+    }
+    .tree-node-row.selected {
+      background: #1f6feb22 !important;
+      border-color: #58a6ff88 !important;
+    }
+    .tree-node-row.flow-active {
+      box-shadow: 0 0 12px #58a6ff44;
+      animation: glow 1.8s ease-in-out infinite;
+    }
 
     /* Navigation tabs */
     .tab {

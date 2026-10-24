@@ -2,10 +2,10 @@
 
 const TABS = [
   { id: 'home',     label: '🏠 Home' },
-  { id: 'overview', label: '🌳 Overview' },
-  { id: 'detail',   label: '⚡ Detail' },
-  { id: 'flow',     label: '🌊 Flow' },
-  { id: 'report',   label: '📊 Report' },
+  { id: 'overview', label: '🌲 Project Tree Studio' },
+  { id: 'detail',   label: '⚡ Optimality & Risk' },
+  { id: 'flow',     label: '🌊 Execution Flow' },
+  { id: 'report',   label: '📊 Project Report' },
 ];
 
 function App() {
@@ -50,20 +50,26 @@ function App() {
           clearInterval(pollRef.current);
           pollRef.current = null;
           if (s.error) {
-            toast('AI summarization error: ' + s.error, 'error');
+            toast('AI summarization notice: ' + s.error, 'error');
           } else {
             toast('✅ AI summaries complete!', 'success');
           }
           // Fetch the completed tree
           const tr = await fetch(`${API}/session/${sessionId}/tree`);
           if (tr.ok) {
-            setTree(await tr.json());
+            const fullTree = await tr.json();
+            setTree(fullTree);
             setSumStatus(null);
+            // Default select root
+            const built = buildTree(fullTree);
+            if (built.length > 0 && !sel) {
+              setSel(built[0]);
+            }
           }
         }
       } catch (_) {}
     }, 2000);
-  }, [toast]);
+  }, [toast, sel]);
 
   React.useEffect(() => {
     return () => pollRef.current && clearInterval(pollRef.current);
@@ -71,7 +77,7 @@ function App() {
 
   const upload = async (file) => {
     if (!file.name.endsWith('.zip')) {
-      toast('Please upload a .zip file', 'error');
+      toast('Please upload a valid .zip file', 'error');
       return;
     }
     setUploading(true);
@@ -88,9 +94,9 @@ function App() {
         throw new Error(e.detail || 'Upload failed');
       }
       const data = await r.json();
-      setProgress({ stage: 'Parsing AST…', pct: 60 });
+      setProgress({ stage: 'Parsing AST hierarchy…', pct: 60 });
       setSid(data.session_id);
-      setProgress({ stage: 'Starting AI summarization…', pct: 85 });
+      setProgress({ stage: 'Starting batch AI summarization…', pct: 85 });
       toast(`✅ ${data.py_files_count} Python files parsed`, 'success');
 
       if (data.summarizing) {
@@ -117,17 +123,38 @@ function App() {
     const fn = tree.all_functions[cf.func_id];
     setSel({
       id: cf.func_id,
-      name: cf.name,
+      name: `def ${cf.name}`,
+      rawName: cf.name,
       level: 'FUNCTION',
       lineno: fn.lineno,
       endLineno: fn.end_lineno,
-      source: fn.source_snippet,
+      source: fn.source_snippet || fn.source,
       summary: fn.summary,
       file: fn.file || fn.filepath,
       callers: fn.callers || [],
       callees: fn.callees || []
     });
     setTab('overview');
+  };
+
+  const jumpToFlow = (funcId) => {
+    if (tree?.all_functions?.[funcId]) {
+      const fn = tree.all_functions[funcId];
+      setSel({
+        id: funcId,
+        name: `def ${fn.name}`,
+        rawName: fn.name,
+        level: 'FUNCTION',
+        lineno: fn.lineno,
+        endLineno: fn.end_lineno,
+        source: fn.source_snippet || fn.source,
+        summary: fn.summary,
+        file: fn.file || fn.filepath,
+        callers: fn.callers || [],
+        callees: fn.callees || []
+      });
+    }
+    setTab('flow');
   };
 
   const retryAI = async () => {
@@ -184,7 +211,7 @@ function App() {
           {/* Multi-Key Rotation Status Indicator */}
           {totalKeysCount > 0 && (
             <div
-              title={`API Key Rotation: ${activeKeysCount}/${totalKeysCount} available`}
+              title={`Gemini API Key Rotation: ${activeKeysCount}/${totalKeysCount} keys operational`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -222,7 +249,14 @@ function App() {
             <WelcomeHome onUpload={upload} uploading={uploading} progress={progress} />
           )}
           {tab === 'overview' && (
-            <OverviewTab tree={tree} node={sel} />
+            <OverviewTab
+              tree={tree}
+              node={sel}
+              sid={sid}
+              onSelectNode={setSel}
+              toast={toast}
+              onJumpToFlow={jumpToFlow}
+            />
           )}
           {tab === 'detail' && (
             <DetailTab sid={sid} node={sel} toast={toast} />
@@ -241,6 +275,7 @@ function App() {
         </div>
       </div>
 
+      {/* Global Explorer RAG Chatbot (right-side drawer) */}
       <ChatPanel sid={sid} tree={tree} onJump={jumpFn} toast={toast} />
       <Toasts T={toasts} rm={rmToast} />
     </div>

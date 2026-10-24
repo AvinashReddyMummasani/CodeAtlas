@@ -20,6 +20,10 @@ backend/sessions/
 sessions/
 backend/chroma_store/
 chroma_store/
+*.db
+*.sqlite
+*.sqlite3
+codeatlas.db
 
 # IDE & OS files
 .vscode/

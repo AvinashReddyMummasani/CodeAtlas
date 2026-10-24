@@ -61,6 +61,7 @@ import upload_module
 import parser_module
 import overview_module
 import key_manager
+import auth_module
 from features import rag_module
 
 # Feature modules — imported lazily so missing files don't crash startup
@@ -239,6 +240,25 @@ if _JS_DIR.exists():
 # ---------------------------------------------------------------------------
 
 
+class SignupRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    username_or_email: str
+    password: str
+
+
+class CreateThreadRequest(BaseModel):
+    title: Optional[str] = "New Chat"
+
+
+class UpdateThreadRequest(BaseModel):
+    title: str
+
+
 class OptimizeRequest(BaseModel):
     func_id: Optional[str] = None
     filepath: Optional[str] = None
@@ -258,11 +278,20 @@ class FlowRequest(BaseModel):
 class ChatRequest(BaseModel):
     question: str
     chat_history: list[dict] = Field(default_factory=list)
+    thread_id: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
 # Helper: require a valid session
 # ---------------------------------------------------------------------------
+
+
+def _get_current_user(request: Request) -> Optional[dict]:
+    """Extract user profile from Authorization Bearer token header if present."""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        return None
+    return auth_module.get_user_by_token(auth_header)
 
 
 def _get_session(session_id: str) -> dict:
@@ -342,6 +371,12 @@ def _background_summarize(parse_result: dict, session_id: str) -> None:
         rag_module.get_or_build_index(function_tree, session_id)
         _finish_status(session_id)
         logger.info("Background summarization+indexing done for '%s'.", session_id)
+        try:
+            fn_cnt = len(function_tree.get("all_functions", {}))
+            with auth_module._get_connection() as conn:
+                conn.execute("UPDATE user_projects SET functions_count = ? WHERE session_id = ?", (fn_cnt, session_id))
+        except Exception:
+            pass
     except Exception as exc:
         logger.error("Background summarization failed for '%s': %s", session_id, exc)
         _finish_status(session_id, error=str(exc))
@@ -358,6 +393,7 @@ def _background_summarize(parse_result: dict, session_id: str) -> None:
 
 @app.post("/api/upload", summary="Upload a ZIP of Python source files")
 async def upload(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="ZIP archive of the project"),
     session_id: Optional[str] = Form(None, description="Existing session ID (optional)"),
@@ -405,6 +441,24 @@ async def upload(
 
     # 4. Summarize + index in background — frontend polls /status
     background_tasks.add_task(_background_summarize, parse_result, session_id)
+
+    # Associate with authenticated user if logged in
+    user = _get_current_user(request)
+    if user:
+        proj_name = file.filename or "Python Project"
+        if proj_name.lower().endswith(".zip"):
+            proj_name = proj_name[:-4]
+        try:
+            auth_module.link_user_project(
+                user_id=user["id"],
+                session_id=session_id,
+                project_name=proj_name,
+                files_count=len(py_files),
+                functions_count=0,
+            )
+            logger.info("Associated session '%s' with user '%s'.", session_id, user["username"])
+        except Exception as exc:
+            logger.warning("Failed linking project to user: %s", exc)
 
     syntax_errors = parse_result.get("syntax_errors", {})
     entry_points  = parse_result.get("entry_points", [])
@@ -755,28 +809,177 @@ async def flow(session_id: str, body: FlowRequest) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
+# ===========================================================================
+# Authentication & User Management Endpoints
+# ===========================================================================
+
+@app.post("/api/auth/signup", summary="Register a new user account")
+async def auth_signup(body: SignupRequest) -> JSONResponse:
+    try:
+        data = auth_module.signup(body.username, body.email, body.password)
+        return JSONResponse(content=data, status_code=201)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error("Signup error: %s", exc)
+        raise HTTPException(status_code=500, detail="Registration failed.")
+
+
+@app.post("/api/auth/login", summary="Log in to user account")
+async def auth_login(body: LoginRequest) -> JSONResponse:
+    try:
+        data = auth_module.login(body.username_or_email, body.password)
+        return JSONResponse(content=data, status_code=200)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+    except Exception as exc:
+        logger.error("Login error: %s", exc)
+        raise HTTPException(status_code=500, detail="Authentication failed.")
+
+
+@app.get("/api/auth/me", summary="Get current user and saved projects")
+async def auth_me(request: Request) -> JSONResponse:
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    projects = auth_module.get_user_projects(user["id"])
+    return JSONResponse(content={"user": user, "projects": projects})
+
+
+@app.post("/api/auth/logout", summary="Log out user")
+async def auth_logout(request: Request) -> JSONResponse:
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        auth_module.logout(auth_header)
+    return JSONResponse(content={"success": True})
+
+
+@app.get("/api/auth/projects", summary="List all projects for authenticated user")
+async def auth_user_projects(request: Request) -> JSONResponse:
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    projects = auth_module.get_user_projects(user["id"])
+    return JSONResponse(content=projects)
+
+
+@app.post("/api/session/{session_id}/activate", summary="Activate and load existing session")
+async def activate_session(session_id: str) -> JSONResponse:
+    session = _get_session(session_id)
+    tree = session.get("function_tree")
+    files_count = len(tree.get("files", {})) if tree else 0
+    funcs_count = len(tree.get("all_functions", {})) if tree else 0
+    return JSONResponse(content={
+        "session_id": session_id,
+        "py_files_count": files_count,
+        "functions_count": funcs_count,
+        "summarizing": False if tree else True,
+        "status": session.get("status", {}),
+    })
+
+
+# ===========================================================================
+# Chat Threads & Message History Endpoints
+# ===========================================================================
+
+@app.get("/api/session/{session_id}/threads", summary="List chat threads for a session")
+async def list_chat_threads(session_id: str, request: Request) -> JSONResponse:
+    user = _get_current_user(request)
+    threads = auth_module.list_threads(session_id, user["id"] if user else None)
+    return JSONResponse(content=threads)
+
+
+@app.post("/api/session/{session_id}/threads", summary="Create a new chat thread")
+async def create_chat_thread(session_id: str, body: CreateThreadRequest, request: Request) -> JSONResponse:
+    user = _get_current_user(request)
+    thread = auth_module.create_thread(session_id, body.title or "New Chat", user["id"] if user else None)
+    return JSONResponse(content=thread, status_code=201)
+
+
+@app.get("/api/session/{session_id}/threads/{thread_id}/messages", summary="Get messages in a thread")
+async def get_thread_messages(session_id: str, thread_id: str) -> JSONResponse:
+    thread = auth_module.get_thread(thread_id)
+    if not thread or thread["session_id"] != session_id:
+        raise HTTPException(status_code=404, detail="Chat thread not found.")
+    messages = auth_module.get_thread_messages(thread_id)
+    return JSONResponse(content={"thread": thread, "messages": messages})
+
+
+@app.delete("/api/session/{session_id}/threads/{thread_id}", summary="Delete a chat thread")
+async def delete_chat_thread(session_id: str, thread_id: str) -> JSONResponse:
+    ok = auth_module.delete_thread(thread_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Chat thread not found.")
+    return JSONResponse(content={"success": True})
+
+
+@app.put("/api/session/{session_id}/threads/{thread_id}", summary="Rename a chat thread")
+async def update_chat_thread(session_id: str, thread_id: str, body: UpdateThreadRequest) -> JSONResponse:
+    ok = auth_module.update_thread_title(thread_id, body.title)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Chat thread not found.")
+    return JSONResponse(content={"success": True})
+
+
+# ---------------------------------------------------------------------------
+# POST /api/session/{session_id}/chat
+# ---------------------------------------------------------------------------
+
 @app.post(
     "/api/session/{session_id}/chat",
-    summary="Ask the RAG chatbot a question about the codebase",
+    summary="Ask the RAG chatbot a question with persistent chat history",
 )
-async def chat(session_id: str, body: ChatRequest) -> JSONResponse:
+async def chat(session_id: str, body: ChatRequest, request: Request) -> JSONResponse:
     """
     Use Retrieval-Augmented Generation to answer a natural-language question
-    about the uploaded codebase.
+    about the uploaded codebase with persistent chat history.
     """
     tree = _get_tree(session_id)
+    user = _get_current_user(request)
+    thread_id = body.thread_id
+
+    # If no thread_id provided, create a new thread with question title
+    if not thread_id:
+        title = body.question.strip()[:45]
+        if len(body.question.strip()) > 45:
+            title += "…"
+        thread = auth_module.create_thread(
+            session_id=session_id,
+            title=title,
+            user_id=user["id"] if user else None,
+        )
+        thread_id = thread["id"]
+
+    # Record user message in history
+    auth_module.add_message(thread_id=thread_id, sender="user", text=body.question)
+
+    # Reconstruct history from thread if body.chat_history was empty
+    history = list(body.chat_history)
+    if not history:
+        past_msgs = auth_module.get_thread_messages(thread_id)
+        for m in past_msgs[:-1]:  # exclude the one we just added
+            role = "user" if m["sender"] == "user" else "assistant"
+            history.append({"role": role, "content": m["text"]})
 
     try:
         result = rag_module.query_rag(
             question=body.question,
             session_id=session_id,
-            chat_history=body.chat_history,
+            chat_history=history,
             function_tree=tree,
         )
     except Exception as exc:
         logger.error("chat failed for '%s': %s", session_id, exc)
         raise HTTPException(status_code=500, detail=f"RAG query failed: {exc}") from exc
 
+    # Record AI message in history
+    auth_module.add_message(
+        thread_id=thread_id,
+        sender="ai",
+        text=result.get("answer", ""),
+        citations=result.get("citations", []),
+    )
+    result["thread_id"] = thread_id
     return JSONResponse(content=result)
 
 

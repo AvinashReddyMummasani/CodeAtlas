@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  codeatlas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codeatlas_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - GEMINI_API_KEY_1=${GEMINI_API_KEY_1:-}
+      - GEMINI_API_KEY_2=${GEMINI_API_KEY_2:-}
+      - GEMINI_API_KEY_3=${GEMINI_API_KEY_3:-}
+      - GEMINI_API_KEY_4=${GEMINI_API_KEY_4:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      - GEMINI_EMBEDDING_MODEL=${GEMINI_EMBEDDING_MODEL:-models/gemini-embedding-001}
+      - AI_BATCH_SUMMARIZE_PER_FILE=${AI_BATCH_SUMMARIZE_PER_FILE:-true}
+    volumes:
+      - codeatlas_db:/app/codeatlas.db
+      - codeatlas_sessions:/app/sessions
+      - codeatlas_chroma:/app/chroma_store
+
+volumes:
+  codeatlas_db:
+  codeatlas_sessions:
+  codeatlas_chroma:

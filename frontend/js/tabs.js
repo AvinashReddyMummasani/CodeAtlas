@@ -57,8 +57,8 @@ const WelcomeHome = ({ onUpload, uploading, progress, sid, tree, onNavigate, onO
     <div style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '36px 20px', gap: 24 }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: 76, height: 76, borderRadius: 20, background: 'linear-gradient(135deg,#1f6feb 0%,#388bfd 50%,#bc8cff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 38, margin: '0 auto 14px', boxShadow: '0 8px 32px #1f6feb44' }}>🗺️</div>
-        <h1 style={{ fontSize: 30, fontWeight: 800, color: '#e6edf3', letterSpacing: '-.5px' }}>CodeAtlas</h1>
-        <p style={{ fontSize: 13.5, color: '#8b949e', marginTop: 4 }}>AI-Powered Python Code Analysis, Interactive Graph Tree &amp; Architecture Map</p>
+        <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-.5px' }} className="brand-gradient">CodeAtlas</h1>
+        <p style={{ fontSize: 14, color: '#8b949e', marginTop: 4 }}>AI-Powered Python Code Analysis, Interactive Graph Tree &amp; Architecture Map</p>
       </div>
 
       {/* Prominent Active Project Banner if tree is already loaded */}

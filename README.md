@@ -8,6 +8,10 @@ app_file: app.py
 pinned: false
 ---
 
+## Frontend
+
+http://localhost:8000
+
 # CodeAtlas 🗺️
 
 > **AI-Powered Python Code Analysis & Documentation Platform**
@@ -23,7 +27,7 @@ CodeAtlas is a full-stack web application that ingests a Python project as a ZIP
 
 ---
 
-## Quick Start
+## ?? Quick Start (One Command)
 
 ### Prerequisites
 - Python 3.10+
@@ -36,33 +40,26 @@ cp .env.example .env
 # Edit .env and set your GEMINI_API_KEY
 ```
 
-### 2. Install & run backend
+### 2. Launch CodeAtlas
 
-**Windows (PowerShell):**
+### Windows (PowerShell)
 ```powershell
-.\start_backend.ps1
+.\run.ps1
 ```
 
-**Linux / macOS:**
+### Windows (Command Prompt)
+```cmd
+run.bat
+```
+
+### Linux / macOS
 ```bash
-chmod +x start_backend.sh
-./start_backend.sh
+chmod +x run.sh && ./run.sh
 ```
 
-Or manually:
-```bash
-cd backend
-pip install -r requirements.txt
-python main.py
-```
+Then open **http://localhost:8000** in your browser (opens automatically!).
 
-The backend starts at **http://localhost:8000**
-
-### 3. Open the frontend
-
-Open `frontend/index.html` in your browser (double-click or drag into Chrome/Firefox).
-
-> **Note:** The frontend fetches from `http://localhost:8000`. Keep the backend running while using the app.
+> **Note:** The frontend fetches from ```http://localhost:8000``` . Keep the backend running while using the app.
 
 ---
 

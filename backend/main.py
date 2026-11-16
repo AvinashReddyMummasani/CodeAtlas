@@ -951,7 +951,7 @@ async def chat(session_id: str, body: ChatRequest, request: Request) -> JSONResp
         thread_id = thread["id"]
 
     # Record user message in history
-    auth_module.add_message(thread_id=thread_id, sender="user", text=body.question)
+    auth_module.add_message(thread_id=thread_id, sender="user", text_content=body.question)
 
     # Reconstruct history from thread if body.chat_history was empty
     history = list(body.chat_history)
@@ -959,7 +959,7 @@ async def chat(session_id: str, body: ChatRequest, request: Request) -> JSONResp
         past_msgs = auth_module.get_thread_messages(thread_id)
         for m in past_msgs[:-1]:  # exclude the one we just added
             role = "user" if m["sender"] == "user" else "assistant"
-            history.append({"role": role, "content": m["text"]})
+            history.append({"role": role, "content": m.get("text_content", m.get("text", ""))})
 
     try:
         result = rag_module.query_rag(
@@ -976,7 +976,7 @@ async def chat(session_id: str, body: ChatRequest, request: Request) -> JSONResp
     auth_module.add_message(
         thread_id=thread_id,
         sender="ai",
-        text=result.get("answer", ""),
+        text_content=result.get("answer", ""),
         citations=result.get("citations", []),
     )
     result["thread_id"] = thread_id
@@ -1044,6 +1044,18 @@ async def keys_status() -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    import threading
+    import time
+    import webbrowser
+
+    def _open_browser():
+        time.sleep(1.8)
+        try:
+            webbrowser.open("http://localhost:8000")
+        except Exception:
+            pass
+
+    threading.Thread(target=_open_browser, daemon=True).start()
     uvicorn.run(
         "main:app",
         host="0.0.0.0",

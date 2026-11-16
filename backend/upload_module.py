@@ -47,7 +47,7 @@ def _is_safe_member(member_name: str) -> bool:
     or is an absolute path.
     """
     # Absolute paths
-    if os.path.isabs(member_name):
+    if os.path.isabs(member_name) or member_name.startswith('/') or member_name.startswith('\\'):
         return False
     # Path traversal
     normalized = os.path.normpath(member_name)

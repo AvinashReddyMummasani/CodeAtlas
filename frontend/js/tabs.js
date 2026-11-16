@@ -406,6 +406,7 @@ const GraphTreeView = ({
   const [pan, setPan] = React.useState({ x: 40, y: 30 });
   const [isDragging, setIsDragging] = React.useState(false);
   const dragStartRef = React.useRef({ x: 0, y: 0 });
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
 
   // Calculate layout
   const { nodes, links, totalWidth, totalHeight } = React.useMemo(() => {
@@ -463,14 +464,44 @@ const GraphTreeView = ({
     setPan({ x: 30, y: 20 });
   };
 
+  // Fullscreen: try native browser fullscreen API, fall back to CSS overlay
+  React.useEffect(() => {
+    if (isFullscreen) {
+      try {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } catch (_) {}
+      // Recalculate fit when entering fullscreen
+      setTimeout(() => fitToScreen(), 150);
+    } else {
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } catch (_) {}
+    }
+  }, [isFullscreen]);
+
+  // Escape key exits fullscreen
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isFullscreen]);
+
   return (
     <div
       ref={containerRef}
       className="graph-canvas-bg"
       style={{
-        flex: 1,
-        height: '100%',
-        position: 'relative',
+        ...(isFullscreen
+          ? { position: 'fixed', inset: 0, zIndex: 200, width: '100vw', height: '100vh' }
+          : { flex: 1, height: '100%', position: 'relative' }),
         overflow: 'hidden',
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
@@ -481,6 +512,30 @@ const GraphTreeView = ({
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
     >
+      {/* Exit fullscreen button (shown only in fullscreen mode) */}
+      {isFullscreen && (
+        <button
+          onClick={() => setIsFullscreen(false)}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            zIndex: 250,
+            padding: '6px 14px',
+            background: '#161b22ee',
+            border: '1px solid #58a6ff',
+            borderRadius: 8,
+            color: '#58a6ff',
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 700,
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          ✕ Exit Fullscreen
+        </button>
+      )}
+
       {/* Zoom & Pan Floating Controls Toolbar */}
       <div
         className="zoom-controls"
@@ -514,6 +569,14 @@ const GraphTreeView = ({
         </button>
         <button className="btn" style={{ padding: '3px 8px', fontSize: 11, background: '#21262d', color: '#c9d1d9' }} onClick={resetZoom} title="Reset View">
           🎯 Center
+        </button>
+        <button
+          className="btn"
+          style={{ padding: '3px 8px', fontSize: 11, background: '#21262d', color: '#58a6ff', border: '1px solid #58a6ff44' }}
+          onClick={() => setIsFullscreen(f => !f)}
+          title="Toggle Fullscreen Graph"
+        >
+          {isFullscreen ? '✕ Exit' : '⛶ Full'}
         </button>
       </div>
 

@@ -332,6 +332,28 @@ function App() {
   const [authMode, setAuthMode] = React.useState('login');
   const [showProjectsModal, setShowProjectsModal] = React.useState(false);
 
+  // ── Responsive layout state ─────────────────────────────────────────────
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+  const [isTablet, setIsTablet] = React.useState(window.innerWidth < 1200);
+  const [sidebarOpen, setSidebarOpen] = React.useState(window.innerWidth >= 768);
+  const [chatOpen, setChatOpen] = React.useState(window.innerWidth >= 1200);
+
+  React.useEffect(() => {
+    const onResize = () => {
+      const w = window.innerWidth;
+      const mobile = w < 768;
+      const tablet = w < 1200;
+      setIsMobile(mobile);
+      setIsTablet(tablet);
+      // Auto-open/close panels when crossing breakpoints
+      if (!mobile) setSidebarOpen(true);
+      if (!tablet) setChatOpen(true);
+      if (mobile) { setSidebarOpen(false); setChatOpen(false); }
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   const pollRef = React.useRef(null);
   const { toasts, toast, rmToast } = useToast();
 
@@ -569,36 +591,84 @@ function App() {
   const activeKeysCount = keysInfo ? keysInfo.filter(k => k.available).length : 0;
   const totalKeysCount = keysInfo ? keysInfo.length : 0;
 
+  // Sidebar style: mobile = absolute overlay, desktop = normal flow
+  const sidebarStyle = isMobile
+    ? {
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        zIndex: 50,
+        width: 260,
+        height: '100%',
+        transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 0.25s ease',
+      }
+    : {
+        // Desktop/tablet: normal flow, fixed width
+        flexShrink: 0,
+        transition: 'width 0.25s ease',
+      };
+
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0d1117' }}>
-      <Sidebar
-        sid={sid}
-        tree={tree}
-        sel={sel}
-        onSel={selNode}
-        onUpload={upload}
-        uploading={uploading}
-        progress={progress}
-        sumStatus={sumStatus}
-      />
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0d1117', position: 'relative' }}>
+
+      {/* Mobile sidebar overlay backdrop */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — always rendered, visibility controlled by transform on mobile */}
+      {(!isMobile || sidebarOpen) && (
+        <div style={sidebarStyle}>
+          <Sidebar
+            sid={sid}
+            tree={tree}
+            sel={sel}
+            onSel={selNode}
+            onUpload={upload}
+            uploading={uploading}
+            progress={progress}
+            sumStatus={sumStatus}
+            isMobile={isMobile}
+            onClose={() => setSidebarOpen(false)}
+          />
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', position: 'relative' }}>
         {/* Top Tab Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #30363d', background: '#161b22', paddingLeft: 4, paddingRight: 8, flexShrink: 0, height: 42 }}>
+        <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #30363d', background: '#161b22', paddingLeft: 4, paddingRight: 8, flexShrink: 0, height: 42, gap: 2 }}>
+
+          {/* Hamburger button (mobile) */}
+          {isMobile && (
+            <button
+              className="hamburger-btn"
+              onClick={() => setSidebarOpen(o => !o)}
+              title="Toggle sidebar"
+            >
+              ☰
+            </button>
+          )}
+
           {TABS.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cls('tab', tab === t.id && 'active')}
             >
-              {t.label}
+              {/* On mobile show only emoji, on larger show full label */}
+              {isMobile ? t.label.split(' ')[0] : t.label}
             </button>
           ))}
 
           {/* AI Summarization progress pill */}
           {sumStatus && !sumStatus.finished && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8, fontSize: 11, color: '#58a6ff', background: '#1f6feb15', border: '1px solid #1f6feb33', borderRadius: 6, padding: '2px 10px' }}>
-              <Spin sz={10} /> {sumStatus.stage || 'AI working…'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8, fontSize: 11, color: '#58a6ff', background: '#1f6feb15', border: '1px solid #1f6feb33', borderRadius: 6, padding: '2px 10px', flexShrink: 0 }}>
+              <Spin sz={10} /> {!isMobile && (sumStatus.stage || 'AI working…')}
             </div>
           )}
 
@@ -629,24 +699,36 @@ function App() {
             {/* Authentication Buttons / User Profile */}
             {user ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button
-                  onClick={() => setShowProjectsModal(true)}
-                  className="btn"
-                  style={{
-                    padding: '3px 8px',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    background: '#21262d',
-                    color: '#c9d1d9',
-                    border: '1px solid #30363d',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4
-                  }}
-                  title="View saved projects"
-                >
-                  <span>📁</span> Projects ({userProjects.length})
-                </button>
+                {!isMobile && (
+                  <button
+                    onClick={() => setShowProjectsModal(true)}
+                    className="btn"
+                    style={{
+                      padding: '3px 8px',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      background: '#21262d',
+                      color: '#c9d1d9',
+                      border: '1px solid #30363d',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                    title="View saved projects"
+                  >
+                    <span>📁</span> Projects ({userProjects.length})
+                  </button>
+                )}
+                {isMobile && (
+                  <button
+                    onClick={() => setShowProjectsModal(true)}
+                    className="btn"
+                    style={{ padding: '3px 7px', fontSize: 13, background: '#21262d', color: '#c9d1d9', border: '1px solid #30363d' }}
+                    title="View saved projects"
+                  >
+                    📁
+                  </button>
+                )}
 
                 <div
                   style={{
@@ -665,7 +747,7 @@ function App() {
                   <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#388bfd', color: '#fff', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {user.username.charAt(0).toUpperCase()}
                   </div>
-                  <span>{user.username}</span>
+                  {!isMobile && <span>{user.username}</span>}
                 </div>
 
                 <button
@@ -674,7 +756,7 @@ function App() {
                   style={{ padding: '3px 8px', fontSize: 11, background: '#21262d', color: '#8b949e', border: '1px solid #30363d' }}
                   title="Sign out of account"
                 >
-                  Logout
+                  {isMobile ? '↩' : 'Logout'}
                 </button>
               </div>
             ) : (
@@ -684,14 +766,14 @@ function App() {
                   className="btn"
                   style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600, background: '#21262d', color: '#c9d1d9', border: '1px solid #30363d' }}
                 >
-                  🔑 Sign In
+                  🔑{!isMobile && ' Sign In'}
                 </button>
                 <button
                   onClick={() => { setAuthMode('signup'); setShowAuthModal(true); }}
                   className="btn btn-solid-blue"
                   style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600 }}
                 >
-                  ✨ Sign Up
+                  ✨{!isMobile && ' Sign Up'}
                 </button>
               </div>
             )}
@@ -702,64 +784,81 @@ function App() {
                 className="btn btn-yellow"
                 style={{ padding: '3px 8px', fontSize: 11 }}
               >
-                🔄 Retry AI
+                🔄{!isMobile && ' Retry AI'}
+              </button>
+            )}
+
+            {/* Chat toggle button (mobile/tablet) */}
+            {(isMobile || isTablet) && (
+              <button
+                className="hamburger-btn"
+                onClick={() => setChatOpen(o => !o)}
+                title="Toggle chat"
+                style={{ fontSize: 16 }}
+              >
+                💬
               </button>
             )}
           </div>
         </div>
 
         {/* Tab Content Panes */}
-        <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-          {tab === 'home' && (
-            <WelcomeHome
-              onUpload={upload}
-              uploading={uploading}
-              progress={progress}
-              sid={sid}
-              tree={tree}
-              onNavigate={setTab}
-              onOpenChat={() => {
-                const el = document.querySelector('input[placeholder*="Ask"]');
-                if (el) el.focus();
-              }}
-            />
-          )}
-          {tab === 'overview' && (
-            <OverviewTab
-              tree={tree}
-              node={sel}
-              sid={sid}
-              onSelectNode={setSel}
-              toast={toast}
-              onJumpToFlow={jumpToFlow}
-            />
-          )}
-          {tab === 'detail' && (
-            <DetailTab sid={sid} node={sel} toast={toast} />
-          )}
-          {tab === 'flow' && (
-            <FlowTab sid={sid} node={sel} toast={toast} />
-          )}
-          {tab === 'report' && (
-            <ReportTab sid={sid} toast={toast} />
-          )}
+        <div style={{ flex: 1, overflow: 'hidden', position: 'relative', display: 'flex' }}>
+          <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+            {tab === 'home' && (
+              <WelcomeHome
+                onUpload={upload}
+                uploading={uploading}
+                progress={progress}
+                sid={sid}
+                tree={tree}
+                onNavigate={setTab}
+                onOpenChat={() => {
+                  setChatOpen(true);
+                  const el = document.querySelector('input[placeholder*="Ask"]');
+                  if (el) el.focus();
+                }}
+              />
+            )}
+            {tab === 'overview' && (
+              <OverviewTab
+                tree={tree}
+                node={sel}
+                sid={sid}
+                onSelectNode={setSel}
+                toast={toast}
+                onJumpToFlow={jumpToFlow}
+              />
+            )}
+            {tab === 'detail' && (
+              <DetailTab sid={sid} node={sel} toast={toast} />
+            )}
+            {tab === 'flow' && (
+              <FlowTab sid={sid} node={sel} toast={toast} />
+            )}
+            {tab === 'report' && (
+              <ReportTab sid={sid} toast={toast} />
+            )}
 
-          {/* Summarization Overlay */}
-          {sumStatus && !sumStatus.finished && (
-            <SumProgress status={sumStatus} />
+            {/* Summarization Overlay */}
+            {sumStatus && !sumStatus.finished && (
+              <SumProgress status={sumStatus} />
+            )}
+          </div>
+
+          {/* Chat Panel — inline on desktop, overlay-ish on mobile */}
+          {chatOpen && (
+            <ChatPanel
+              sid={sid}
+              tree={tree}
+              onJump={jumpFn}
+              toast={toast}
+              user={user}
+              token={token}
+            />
           )}
         </div>
       </div>
-
-      {/* Global Explorer RAG Chatbot (right-side drawer with Chat History) */}
-      <ChatPanel
-        sid={sid}
-        tree={tree}
-        onJump={jumpFn}
-        toast={toast}
-        user={user}
-        token={token}
-      />
 
       {/* Authentication Modal */}
       {showAuthModal && (

@@ -312,17 +312,97 @@
       letter-spacing: 0.06em;
       margin-bottom: 8px;
     }
+
+    /* ── Responsive layout additions ─────────────────────────── */
+
+    /* Hamburger / mobile toggle buttons */
+    .hamburger-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #c9d1d9;
+      font-size: 20px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .hamburger-btn:hover { background: #21262d; }
+
+    /* Mobile sidebar overlay backdrop */
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: #00000066;
+      z-index: 49;
+      animation: fadeIn 0.18s ease both;
+    }
+
+    /* Sidebar slide transition */
+    .sidebar-mobile {
+      transition: transform 0.25s ease;
+    }
+    .sidebar-mobile-closed {
+      transform: translateX(-100%);
+    }
+    .sidebar-mobile-open {
+      transform: translateX(0);
+    }
+
+    /* Chat panel slide-in from right */
+    .chat-panel-transition {
+      transition: width 0.25s ease, min-width 0.25s ease;
+    }
+
+    /* Improved active tab indicator */
+    .tab.active {
+      color: #58a6ff;
+      border-bottom-color: #58a6ff;
+      background: linear-gradient(180deg, transparent 0%, #58a6ff0a 100%);
+    }
+
+    /* Enhanced graph node hover glow */
+    .graph-node-card:hover {
+      border-color: #58a6ff99;
+      background: #1c2433;
+      box-shadow: 0 4px 20px #58a6ff22;
+    }
+
+    /* Enhanced glassmorphism for modals */
+    .card.anim-scale {
+      animation: fadeIn 0.2s ease both;
+      backdrop-filter: blur(16px);
+    }
+    @keyframes scaleIn { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:none; } }
+    .anim-scale { animation: scaleIn 0.18s ease both; }
+
+    /* ── Mobile/Tablet media queries ───────────────────────── */
+    @media (max-width: 768px) {
+      .tab {
+        padding: 0 8px;
+        font-size: 11px;
+      }
+      /* On very small screens hide tab text, keep emoji */
+      .tab-label-text {
+        display: none;
+      }
+    }
+    @media (min-width: 769px) {
+      .tab-label-text {
+        display: inline;
+      }
+    }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
   <!-- Modular React Application Scripts (with cache-busting query strings) -->
-  <script type="text/babel" src="js/utils.js?v=20261024_auth"></script>
-  <script type="text/babel" src="js/primitives.js?v=20261024_auth"></script>
-  <script type="text/babel" src="js/sidebar.js?v=20261024_auth"></script>
-  <script type="text/babel" src="js/tabs.js?v=20261024_auth"></script>
-  <script type="text/babel" src="js/chat.js?v=20261024_auth"></script>
-  <script type="text/babel" src="js/app.js?v=20261024_auth"></script>
+  <script type="text/babel" src="js/utils.js?v=20261116_responsive"></script>
+  <script type="text/babel" src="js/primitives.js?v=20261116_responsive"></script>
+  <script type="text/babel" src="js/sidebar.js?v=20261116_responsive"></script>
+  <script type="text/babel" src="js/tabs.js?v=20261116_responsive"></script>
+  <script type="text/babel" src="js/chat.js?v=20261116_responsive"></script>
+  <script type="text/babel" src="js/app.js?v=20261116_responsive"></script>
 </body>
 </html>

@@ -83,7 +83,7 @@ const SidebarTreeNode = ({ node, depth = 0, onSel, selId, defaultOpen = false, f
 };
 
 // ── Sidebar component ─────────────────────────────────────────────────────
-const Sidebar = ({ sid, tree, sel, onSel, onUpload, uploading, progress, sumStatus, flowStepMap = {} }) => {
+const Sidebar = ({ sid, tree, sel, onSel, onUpload, uploading, progress, sumStatus, flowStepMap = {}, onClose, isMobile }) => {
   const [q, setQ] = React.useState('');
   const [res, setRes] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
@@ -124,15 +124,25 @@ const Sidebar = ({ sid, tree, sel, onSel, onUpload, uploading, progress, sumStat
   };
 
   return (
-    <div style={{ width: 280, minWidth: 280, display: 'flex', flexDirection: 'column', height: '100%', background: '#161b22', borderRight: '1px solid #30363d' }}>
+    <div style={{ width: isMobile ? 260 : 280, minWidth: isMobile ? 260 : 280, display: 'flex', flexDirection: 'column', height: '100%', background: '#161b22', borderRight: '1px solid #30363d' }}>
       {/* Logo */}
       <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid #30363d', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
           <div style={{ width: 34, height: 34, borderRadius: 8, background: 'linear-gradient(135deg,#1f6feb,#388bfd)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 2px 12px #1f6feb44' }}>🗺️</div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: '#e6edf3', lineHeight: 1.2 }}>CodeAtlas</div>
             <div style={{ fontSize: 10, color: '#8b949e' }}>AI Code Intelligence</div>
           </div>
+          {/* Close button on mobile */}
+          {isMobile && onClose && (
+            <button
+              onClick={onClose}
+              style={{ background: 'transparent', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 18, padding: '2px 6px', borderRadius: 6, flexShrink: 0 }}
+              title="Close sidebar"
+            >
+              ✕
+            </button>
+          )}
         </div>
         <AIBadge />
       </div>
